@@ -27,6 +27,31 @@ $method = $_SERVER['REQUEST_METHOD'];
 
 // ---------- GET ----------
 if ($method === 'GET') {
+    if (($_GET['action'] ?? '') === 'resequence_reg_no') {
+        if ($admin['role'] !== 'super_admin') {
+            jsonError('Only super admin can run reg number resequencing', 403);
+        }
+
+        $targetZoneId = isset($_GET['zone_id']) ? (int)$_GET['zone_id'] : null;
+        $targetSetNumber = isset($_GET['set_number']) ? (int)$_GET['set_number'] : null;
+
+        try {
+            $pdo->beginTransaction();
+            $result = resequenceRegNos(
+                $pdo,
+                $targetZoneId !== null && $targetZoneId > 0 ? $targetZoneId : null,
+                $targetSetNumber !== null && $targetSetNumber > 0 ? $targetSetNumber : null
+            );
+            $pdo->commit();
+
+            jsonSuccess($result, 'Registration numbers resequenced successfully');
+        } catch (Exception $e) {
+            if ($pdo->inTransaction()) $pdo->rollBack();
+            error_log('Reg number resequence error: ' . $e->getMessage());
+            jsonError('Failed to resequence registration numbers', 500);
+        }
+    }
+
     // Single student by id
     if (isset($_GET['id'])) {
         $id = (int)$_GET['id'];
@@ -121,7 +146,13 @@ if ($method === 'GET') {
         jsonSuccess(['count' => $total]);
     }
 
-    $sql .= " ORDER BY s.created_at DESC LIMIT 200";
+    $sql .= "\n        ORDER BY
+            COALESCE(s.last_name, '') ASC,
+            COALESCE(s.first_name, '') ASC,
+            COALESCE(s.other_names, '') ASC,
+            s.id ASC
+        LIMIT 200
+    ";
 
     $stmt = $pdo->prepare($sql);
     $stmt->execute($params);
@@ -161,7 +192,6 @@ if ($method === 'PUT') {
         'address'           => 'string_null',
         'state_of_origin'   => 'string_null',
         'lga'               => 'string_null',
-        'reg_no'            => 'string_null',
         'set_number'        => 'int_null',
         'current_conclave'  => 'int_conclave',
         'status'            => 'status',
@@ -253,22 +283,40 @@ if ($method === 'PUT') {
         }
     }
 
-    // Reg no uniqueness within zone
-    if (array_key_exists('reg_no', $newSnapshot) && $newSnapshot['reg_no'] !== null) {
-        $zoneId = $newSnapshot['zone_id'] ?? $student['zone_id'];
-        $chk = $pdo->prepare("SELECT id FROM students WHERE reg_no = ? AND zone_id = ? AND id <> ?");
-        $chk->execute([$newSnapshot['reg_no'], $zoneId, $id]);
-        if ($chk->fetch()) {
-            jsonError('Registration number already in use in this zone');
-        }
-    }
-
     try {
         $pdo->beginTransaction();
+
+        $oldZoneId = (int)$student['zone_id'];
+        $oldSetNumber = (int)($student['set_number'] ?? 0);
 
         $params[] = $id;
         $sql = "UPDATE students SET " . implode(', ', $sets) . ", updated_at = NOW() WHERE id = ?";
         $pdo->prepare($sql)->execute($params);
+
+        // Keep reg_no contiguous and alphabetically aligned when key ordering fields change.
+        $resequenceTriggers = ['first_name', 'last_name', 'other_names', 'status', 'zone_id', 'set_number'];
+        $needsResequence = false;
+        foreach ($resequenceTriggers as $k) {
+            if (array_key_exists($k, $newSnapshot)) {
+                $needsResequence = true;
+                break;
+            }
+        }
+
+        if ($needsResequence) {
+            $newZoneId = (int)($newSnapshot['zone_id'] ?? $student['zone_id']);
+            $newSetNumber = (int)($newSnapshot['set_number'] ?? ($student['set_number'] ?? 0));
+
+            if ($oldSetNumber > 0) {
+                resequenceRegNosForZoneSet($pdo, $oldZoneId, $oldSetNumber);
+            }
+            if ($newSetNumber > 0 && ($newZoneId !== $oldZoneId || $newSetNumber !== $oldSetNumber)) {
+                resequenceRegNosForZoneSet($pdo, $newZoneId, $newSetNumber);
+            }
+            if ($newSetNumber > 0 && $oldSetNumber <= 0) {
+                resequenceRegNosForZoneSet($pdo, $newZoneId, $newSetNumber);
+            }
+        }
 
         // Audit
         $pdo->prepare("
@@ -324,6 +372,9 @@ if ($method === 'DELETE') {
     try {
         $pdo->beginTransaction();
 
+        $zoneId = (int)$student['zone_id'];
+        $setNumber = (int)($student['set_number'] ?? 0);
+
         // Snapshot for audit before cascade
         $pdo->prepare("
             INSERT INTO audit_logs (admin_id, action, entity_type, entity_id, old_values, new_values)
@@ -343,6 +394,10 @@ if ($method === 'DELETE') {
 
         // Cascades via FKs: applications, attendance, assessments, results
         $pdo->prepare("DELETE FROM students WHERE id = ?")->execute([$id]);
+
+        if ($setNumber > 0) {
+            resequenceRegNosForZoneSet($pdo, $zoneId, $setNumber);
+        }
 
         $pdo->commit();
         jsonSuccess(null, 'Student deleted');

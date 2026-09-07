@@ -14,8 +14,8 @@
 -- SELECT id, name, code FROM zones;
 
 SET @zone_kaduna := (SELECT id FROM zones WHERE name LIKE '%Kaduna%' OR code IN ('KAD','KD') LIMIT 1);
-SET @zone_minna  := (SELECT id FROM zones WHERE name LIKE '%Minna%'  OR code IN ('MIN','MN') LIMIT 1);
-SET @zone_ufuma  := (SELECT id FROM zones WHERE name LIKE '%Ufuma%'  OR code IN ('UFU','UF') LIMIT 1);
+SET @zone_minna  := (SELECT id FROM zones WHERE name LIKE '%Minna%'  OR code IN ('MNA','MN') LIMIT 1);
+SET @zone_ufuma  := (SELECT id FROM zones WHERE name LIKE '%Ufuma%'  OR code IN ('UFM','UF') LIMIT 1);
 
 -- Fallback if not found
 SET @zone_kaduna := IFNULL(@zone_kaduna, (SELECT id FROM zones ORDER BY id LIMIT 1));

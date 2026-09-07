@@ -171,7 +171,6 @@ if ($method === 'POST') {
                 jsonError('No active junior set. A super admin must open a set from Admin → Sets before admissions can proceed.');
             }
             $setNumber = (int)$junior['set_number'];
-            $regNo = generateRegNo($pdo, $zoneId, $setNumber);
 
             // Update application
             $stmt = $pdo->prepare("
@@ -192,11 +191,18 @@ if ($method === 'POST') {
                     admission_date = NOW(),
                     admission_year = YEAR(NOW()),
                     set_number = ?,
-                    reg_no = ?,
+                    reg_no = NULL,
                     current_conclave = 0
                 WHERE id = ?
             ");
-            $stmt->execute([$setNumber, $regNo, $app['student_id']]);
+            $stmt->execute([$setNumber, $app['student_id']]);
+
+            // Rebuild zone/set reg numbers alphabetically after every admission.
+            resequenceRegNosForZoneSet($pdo, $zoneId, $setNumber);
+
+            $stmt = $pdo->prepare("SELECT reg_no FROM students WHERE id = ?");
+            $stmt->execute([$app['student_id']]);
+            $regNo = (string)($stmt->fetchColumn() ?: '');
 
             // Admission SMS (stub)
             $msg = "Dear {$app['first_name']}, congratulations! You have been admitted to " . APP_NAME .

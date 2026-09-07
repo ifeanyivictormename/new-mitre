@@ -184,8 +184,27 @@ function promoteJuniorToSenior(PDO $pdo): void {
 }
 
 /**
+ * Get one-letter zone prefix used in reg numbers.
+ */
+function zoneRegPrefix(PDO $pdo, int $zoneId): string {
+    $stmt = $pdo->prepare("SELECT code FROM zones WHERE id = ?");
+    $stmt->execute([$zoneId]);
+    $code = strtoupper((string)($stmt->fetchColumn() ?: 'Z'));
+    $code = preg_replace('/[^A-Z0-9]/', '', $code);
+    return $code !== '' ? substr($code, 0, 1) : 'Z';
+}
+
+/**
+ * Build registration number format: {set}-{zoneLetter}{sequence:03d}
+ * Example: 18-K001
+ */
+function formatRegNo(int $setNumber, string $zoneLetter, int $sequence): string {
+    return sprintf('%d-%s%03d', $setNumber, strtoupper($zoneLetter), $sequence);
+}
+
+/**
  * Generate next registration number for a set in a zone.
- * Format: MITRE/{ZONE_CODE}/{SET}/{SEQ:03d}
+ * Format: {SET}-{ZONE_LETTER}{SEQ:03d}
  *
  * Call inside an active transaction. This function locks the target set row
  * so concurrent admissions cannot allocate the same sequence.
@@ -195,26 +214,23 @@ function generateRegNo(PDO $pdo, int $zoneId, int $setNumber): string {
     $lock = $pdo->prepare("SELECT id FROM sets WHERE set_number = ? FOR UPDATE");
     $lock->execute([$setNumber]);
 
-    $stmt = $pdo->prepare("SELECT code FROM zones WHERE id = ?");
-    $stmt->execute([$zoneId]);
-    $code = $stmt->fetchColumn() ?: 'Z';
-    $code = strtoupper(preg_replace('/[^A-Za-z0-9]/', '', $code));
+    $zoneLetter = zoneRegPrefix($pdo, $zoneId);
 
     // Use MAX(sequence) instead of COUNT so deleted rows do not cause reuse.
-    $stmt = $pdo->prepare("
-        SELECT COALESCE(MAX(CAST(SUBSTRING_INDEX(reg_no, '/', -1) AS UNSIGNED)), 0)
-        FROM students
-        WHERE zone_id = ?
-          AND set_number = ?
-          AND reg_no REGEXP ?
-    ");
-    $pattern = '^MITRE/' . $code . '/' . (int)$setNumber . '/[0-9]+$';
-    $stmt->execute([$zoneId, $setNumber, $pattern]);
+        $stmt = $pdo->prepare("
+                SELECT COALESCE(MAX(CAST(SUBSTRING(SUBSTRING_INDEX(reg_no, '-', -1), 2) AS UNSIGNED)), 0)
+            FROM students
+            WHERE zone_id = ?
+              AND set_number = ?
+              AND reg_no REGEXP ?
+        ");
+    $pattern = '^' . (int)$setNumber . '-' . $zoneLetter . '[0-9]+$';
+        $stmt->execute([$zoneId, $setNumber, $pattern]);
     $seq = (int)$stmt->fetchColumn() + 1;
 
     // Defensive fallback for legacy data anomalies.
     while (true) {
-        $candidate = sprintf('MITRE/%s/%d/%03d', $code, $setNumber, $seq);
+        $candidate = formatRegNo($setNumber, $zoneLetter, $seq);
         $chk = $pdo->prepare("SELECT 1 FROM students WHERE zone_id = ? AND reg_no = ? LIMIT 1");
         $chk->execute([$zoneId, $candidate]);
         if (!$chk->fetchColumn()) {
@@ -222,6 +238,101 @@ function generateRegNo(PDO $pdo, int $zoneId, int $setNumber): string {
         }
         $seq++;
     }
+}
+
+/**
+ * Recalculate reg_no for all students in a zone/set alphabetically.
+ * This keeps numbering contiguous after admissions or deletions.
+ */
+function resequenceRegNosForZoneSet(PDO $pdo, int $zoneId, int $setNumber): void {
+    if ($zoneId <= 0 || $setNumber <= 0) {
+        return;
+    }
+
+    // Lock students in this zone/set to avoid concurrent resequence races.
+    $lock = $pdo->prepare("
+        SELECT id FROM students
+        WHERE zone_id = ? AND set_number = ?
+        FOR UPDATE
+    ");
+    $lock->execute([$zoneId, $setNumber]);
+
+    // Clear existing reg numbers first to avoid unique-key conflicts while reassigning.
+    $clear = $pdo->prepare("
+        UPDATE students
+        SET reg_no = NULL
+        WHERE zone_id = ? AND set_number = ?
+    ");
+    $clear->execute([$zoneId, $setNumber]);
+
+    // Only assign to students who are officially in the programme.
+    $stmt = $pdo->prepare("
+        SELECT id
+        FROM students
+        WHERE zone_id = ?
+          AND set_number = ?
+          AND status IN ('admitted', 'active', 'probation', 'graduated')
+        ORDER BY
+            COALESCE(last_name, '') ASC,
+            COALESCE(first_name, '') ASC,
+            COALESCE(other_names, '') ASC,
+            id ASC
+    ");
+    $stmt->execute([$zoneId, $setNumber]);
+    $rows = $stmt->fetchAll();
+
+    $zoneLetter = zoneRegPrefix($pdo, $zoneId);
+    $upd = $pdo->prepare("UPDATE students SET reg_no = ? WHERE id = ?");
+    $seq = 1;
+    foreach ($rows as $row) {
+        $upd->execute([formatRegNo($setNumber, $zoneLetter, $seq), (int)$row['id']]);
+        $seq++;
+    }
+}
+
+/**
+ * Recalculate reg_no across many zone/set groups.
+ * Optional filters allow targeting one zone and/or one set.
+ */
+function resequenceRegNos(PDO $pdo, ?int $zoneId = null, ?int $setNumber = null): array {
+    $sql = "
+        SELECT DISTINCT zone_id, set_number
+        FROM students
+        WHERE set_number IS NOT NULL
+          AND set_number > 0
+    ";
+    $params = [];
+
+    if ($zoneId !== null && $zoneId > 0) {
+        $sql .= " AND zone_id = ?";
+        $params[] = $zoneId;
+    }
+    if ($setNumber !== null && $setNumber > 0) {
+        $sql .= " AND set_number = ?";
+        $params[] = $setNumber;
+    }
+
+    $sql .= " ORDER BY zone_id ASC, set_number ASC";
+
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute($params);
+    $groups = $stmt->fetchAll();
+
+    $processed = 0;
+    foreach ($groups as $g) {
+        resequenceRegNosForZoneSet($pdo, (int)$g['zone_id'], (int)$g['set_number']);
+        $processed++;
+    }
+
+    return [
+        'processed_groups' => $processed,
+        'groups' => array_map(static function ($g) {
+            return [
+                'zone_id' => (int)$g['zone_id'],
+                'set_number' => (int)$g['set_number'],
+            ];
+        }, $groups),
+    ];
 }
 
 /**

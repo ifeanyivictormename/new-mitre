@@ -611,6 +611,7 @@ const Pages = {
               <option value="withdrawn">Withdrawn</option>
               <option value="graduated">Graduated</option>
             </select>
+            ${Admin.user?.role === 'super_admin' ? '<button class="btn btn-sm btn-outline-primary" onclick="Pages.resequenceStudentRegNos()" title="Rebuild registration numbers"><i class="bi bi-sort-numeric-down"></i> Rebuild Reg. No.</button>' : ''}
             ${this.exportButtonsHtml('students')}
             <button class="btn btn-sm btn-outline-secondary" onclick="Pages.load('students')" title="Refresh"><i class="bi bi-arrow-clockwise"></i></button>
           </div>
@@ -674,6 +675,22 @@ const Pages = {
       clearTimeout(searchTimer);
       searchTimer = setTimeout(fetchStudents, 300);
     });
+  },
+
+  async resequenceStudentRegNos() {
+    if (Admin.user?.role !== 'super_admin') {
+      Admin.toast('Only super admin can rebuild registration numbers', 'error');
+      return;
+    }
+    if (!confirm('Rebuild registration numbers for all existing students now? This will renumber records by alphabetical order within each zone and set.')) return;
+    try {
+      const res = await Admin.get('/students/index.php?action=resequence_reg_no');
+      const count = Number(res?.data?.processed_groups || 0);
+      Admin.toast(`Registration numbers rebuilt for ${count} zone/set group(s).`);
+      await this.load('students');
+    } catch (e) {
+      Admin.toast(e.message, 'error');
+    }
   },
 
   _studentModalHtml() {
