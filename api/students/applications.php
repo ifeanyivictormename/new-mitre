@@ -177,9 +177,13 @@ if ($method === 'POST') {
             $stmt = $pdo->prepare("
                 UPDATE applications 
                 SET status = 'admitted', reviewed_by = ?, review_notes = ?, reviewed_at = NOW()
-                WHERE id = ?
+                    WHERE id = ? AND status = 'pending'
             ");
             $stmt->execute([$admin['id'], $notes, $appId]);
+                if ($stmt->rowCount() !== 1) {
+                    $pdo->rollBack();
+                    jsonError('This application has already been reviewed');
+                }
 
             // Update student with set + reg no
             $stmt = $pdo->prepare("
@@ -212,9 +216,13 @@ if ($method === 'POST') {
             $stmt = $pdo->prepare("
                 UPDATE applications 
                 SET status = 'rejected', reviewed_by = ?, review_notes = ?, reviewed_at = NOW()
-                WHERE id = ?
+                    WHERE id = ? AND status = 'pending'
             ");
             $stmt->execute([$admin['id'], $notes, $appId]);
+                if ($stmt->rowCount() !== 1) {
+                    $pdo->rollBack();
+                    jsonError('This application has already been reviewed');
+                }
 
             // Keep student status as applicant or move to a rejected state if desired.
             // For now we leave student status as 'applicant' but application is rejected.

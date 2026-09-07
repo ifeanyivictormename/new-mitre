@@ -50,7 +50,7 @@ function clean(string $value): string {
  */
 function normalizePhone(string $phone): ?string {
     $phone = preg_replace('/[^0-9+]/', '', $phone);
-    
+
     if (preg_match('/^\+234([7-9][0-1]\d{8})$/', $phone, $m)) {
         return '0' . $m[1];
     }
@@ -72,7 +72,7 @@ function generateToken(int $length = 32): string {
 
 /**
  * Calculate attendance score (out of 45)
- * 3 days × 2 sessions = 6 possible marks
+ * 3 days x 2 sessions = 6 possible marks
  * Each present session = 7.5 marks (45 / 6)
  */
 function calculateAttendanceScore(array $sessions): float {
@@ -104,7 +104,7 @@ function calculateTotalScore(array $scores): float {
 
 /**
  * Get active sets system-wide (junior + senior).
- * Sets are global — all zones run the same set concurrently.
+ * Sets are global - all zones run the same set concurrently.
  * Returns array of set rows ordered by set_number ASC (lower = older = senior).
  */
 function getActiveSets(PDO $pdo): array {
@@ -174,7 +174,7 @@ function ensureSet(PDO $pdo, int $setNumber, string $status = 'active_junior'): 
 }
 
 /**
- * Promote roles when a new junior set opens: existing junior → senior.
+ * Promote roles when a new junior set opens: existing junior -> senior.
  */
 function promoteJuniorToSenior(PDO $pdo): void {
     $pdo->exec("
@@ -186,22 +186,42 @@ function promoteJuniorToSenior(PDO $pdo): void {
 /**
  * Generate next registration number for a set in a zone.
  * Format: MITRE/{ZONE_CODE}/{SET}/{SEQ:03d}
- * (Reg no stays zone-scoped so numbers don't collide across branches.)
+ *
+ * Call inside an active transaction. This function locks the target set row
+ * so concurrent admissions cannot allocate the same sequence.
  */
 function generateRegNo(PDO $pdo, int $zoneId, int $setNumber): string {
+    // Serialize allocation for this set.
+    $lock = $pdo->prepare("SELECT id FROM sets WHERE set_number = ? FOR UPDATE");
+    $lock->execute([$setNumber]);
+
     $stmt = $pdo->prepare("SELECT code FROM zones WHERE id = ?");
     $stmt->execute([$zoneId]);
     $code = $stmt->fetchColumn() ?: 'Z';
     $code = strtoupper(preg_replace('/[^A-Za-z0-9]/', '', $code));
 
+    // Use MAX(sequence) instead of COUNT so deleted rows do not cause reuse.
     $stmt = $pdo->prepare("
-        SELECT COUNT(*) FROM students
-        WHERE zone_id = ? AND set_number = ? AND reg_no IS NOT NULL
+        SELECT COALESCE(MAX(CAST(SUBSTRING_INDEX(reg_no, '/', -1) AS UNSIGNED)), 0)
+        FROM students
+        WHERE zone_id = ?
+          AND set_number = ?
+          AND reg_no REGEXP ?
     ");
-    $stmt->execute([$zoneId, $setNumber]);
+    $pattern = '^MITRE/' . $code . '/' . (int)$setNumber . '/[0-9]+$';
+    $stmt->execute([$zoneId, $setNumber, $pattern]);
     $seq = (int)$stmt->fetchColumn() + 1;
 
-    return sprintf('MITRE/%s/%d/%03d', $code, $setNumber, $seq);
+    // Defensive fallback for legacy data anomalies.
+    while (true) {
+        $candidate = sprintf('MITRE/%s/%d/%03d', $code, $setNumber, $seq);
+        $chk = $pdo->prepare("SELECT 1 FROM students WHERE zone_id = ? AND reg_no = ? LIMIT 1");
+        $chk->execute([$zoneId, $candidate]);
+        if (!$chk->fetchColumn()) {
+            return $candidate;
+        }
+        $seq++;
+    }
 }
 
 /**
