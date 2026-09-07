@@ -184,10 +184,10 @@ if ($method === 'POST') {
                     jsonError('This application has already been reviewed');
                 }
 
-            // Update student with set + reg no
+            // Update student with set + reg no — admitted students become active immediately
             $stmt = $pdo->prepare("
                 UPDATE students 
-                SET status = 'admitted',
+                SET status = 'active',
                     admission_date = NOW(),
                     admission_year = YEAR(NOW()),
                     set_number = ?,

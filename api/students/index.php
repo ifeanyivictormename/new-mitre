@@ -80,6 +80,7 @@ if ($method === 'GET') {
     $statusesCsv = trim($_GET['statuses'] ?? '');
     $statusList = [];
     $zoneId  = isset($_GET['zone_id']) ? (int)$_GET['zone_id'] : null;
+    $setNumber = isset($_GET['set_number']) && $_GET['set_number'] !== '' ? (int)$_GET['set_number'] : null;
     $search  = trim($_GET['search'] ?? '');
 
     if ($admin['role'] === 'admin' && $admin['zone_id'] !== null) {
@@ -127,6 +128,10 @@ if ($method === 'GET') {
     if ($zoneId) {
         $sql .= " AND s.zone_id = ?";
         $params[] = $zoneId;
+    }
+    if ($setNumber !== null) {
+        $sql .= " AND s.set_number = ?";
+        $params[] = $setNumber;
     }
     if ($search !== '') {
         $sql .= " AND (

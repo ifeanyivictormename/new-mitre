@@ -151,7 +151,12 @@ const Pages = {
       if (/[",\n\r]/.test(s)) return '"' + s.replace(/"/g, '""') + '"';
       return s;
     };
-    const lines = [headers.map(esc).join(',')].concat(matrix.map(row => row.map(esc).join(',')));
+    // Title/header row first, then blank line, then column headers + data
+    const lines = [
+      [esc(title)].join(','),
+      '',
+      headers.map(esc).join(',')
+    ].concat(matrix.map(row => row.map(esc).join(',')));
     // UTF-8 BOM so Excel recognises encoding
     const blob = new Blob(['\uFEFF' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
     const a = document.createElement('a');
@@ -560,9 +565,16 @@ const Pages = {
 
   // -------------------- STUDENTS --------------------
   async students() {
-    const res = await Admin.get('/students/index.php');
-    const rows = res.data || [];
-    this._studentRows = rows;
+    // Load active sets overview so we can offer Junior / Senior tabs
+    const [setsOvRes, initialRes] = await Promise.all([
+      Admin.get('/sets/index.php?overview=1').catch(() => ({ data: {} })),
+      Admin.get('/students/index.php').catch(() => ({ data: [] }))
+    ]);
+    const ov = setsOvRes.data || {};
+    const juniorSet = ov.junior || null;
+    const seniorSet = ov.senior || null;
+    this._studentSetFilter = this._studentSetFilter || ''; // '' = all, or set_number string
+    this._studentRows = initialRes.data || [];
 
     const rowHtml = (r) => `
       <tr>
@@ -570,9 +582,7 @@ const Pages = {
         <td>${r.reg_no || '—'}</td>
         <td>${r.phone}</td>
         <td>${r.zone_name || ''}</td>
-        <td>${r.set_number != null ? 'Set ' + r.set_number : '—'}</td>
         <td>${Admin.statusBadge(r.status)}</td>
-        <td>${r.current_conclave || 0}</td>
         <td>${Admin.formatDate(r.admission_date)}</td>
         <td class="text-nowrap">
           <button class="btn btn-outline-primary btn-sm me-1" onclick="Pages.viewStudent(${r.id}, 'students')" title="View profile"><i class="bi bi-eye"></i></button>
@@ -583,16 +593,29 @@ const Pages = {
 
     const stuOpts = {
       key: 'students',
-      rows,
+      rows: this._studentRows,
       rowHtml,
       tbodyId: 'studentTableBody',
       pagerId: 'studentPager',
-      colspan: 9,
+      colspan: 7,
       emptyText: 'No students found',
       page: 1
     };
 
+    // Build set tabs from the two current active sets
+    const setTabs = [];
+    setTabs.push(`<li class="nav-item"><button type="button" class="nav-link ${this._studentSetFilter === '' ? 'active' : ''}" data-set="">All sets</button></li>`);
+    if (seniorSet) {
+      const n = String(seniorSet.set_number);
+      setTabs.push(`<li class="nav-item"><button type="button" class="nav-link ${this._studentSetFilter === n ? 'active' : ''}" data-set="${n}">Senior · Set ${n}</button></li>`);
+    }
+    if (juniorSet) {
+      const n = String(juniorSet.set_number);
+      setTabs.push(`<li class="nav-item"><button type="button" class="nav-link ${this._studentSetFilter === n ? 'active' : ''}" data-set="${n}">Junior · Set ${n}</button></li>`);
+    }
+
     this.content.innerHTML = `
+      <ul class="nav nav-tabs mb-3" id="studentSetTabs">${setTabs.join('')}</ul>
       <div class="card table-card">
         <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
           <span class="fw-semibold">Students</span>
@@ -618,7 +641,7 @@ const Pages = {
         </div>
         <div class="table-responsive">
           <table class="table table-hover mb-0">
-            <thead><tr><th>Name</th><th>Reg. No.</th><th>Phone</th><th>Zone</th><th>Set</th><th>Status</th><th>Conclave</th><th>Admitted</th><th>Action</th></tr></thead>
+            <thead><tr><th>Name</th><th>Reg. No.</th><th>Phone</th><th>Zone</th><th>Status</th><th>Admitted</th><th>Action</th></tr></thead>
             <tbody id="studentTableBody"></tbody>
           </table>
         </div>
@@ -628,16 +651,23 @@ const Pages = {
     `;
 
     this.renderPagedTable(stuOpts);
+
+    const exportTitle = (() => {
+      const f = this._studentSetFilter || '';
+      if (!f) return 'Students – All sets';
+      if (seniorSet && String(seniorSet.set_number) === f) return `Students – Senior · Set ${f}`;
+      if (juniorSet && String(juniorSet.set_number) === f) return `Students – Junior · Set ${f}`;
+      return `Students – Set ${f}`;
+    })();
+
     this.setExportData('students', {
-      title: 'Students',
+      title: exportTitle,
       columns: [
         { key: 'name', label: 'Name' },
         { key: 'reg_no', label: 'Reg. No.' },
         { key: 'phone', label: 'Phone' },
         { key: 'zone_name', label: 'Zone' },
-        { key: 'set_number', label: 'Set' },
         { key: 'status', label: 'Status' },
-        { key: 'current_conclave', label: 'Conclave' },
         { key: 'admission_date', label: 'Admitted' }
       ],
       getRows: () => (this._studentRows || []).map(r => ({
@@ -645,9 +675,7 @@ const Pages = {
         reg_no: r.reg_no || '',
         phone: r.phone,
         zone_name: r.zone_name || '',
-        set_number: r.set_number != null ? r.set_number : '',
         status: r.status,
-        current_conclave: r.current_conclave || 0,
         admission_date: Admin.formatDate(r.admission_date)
       }))
     });
@@ -656,24 +684,51 @@ const Pages = {
     const fetchStudents = async () => {
       const status = document.getElementById('studentStatusFilter')?.value || '';
       const q = document.getElementById('studentSearch')?.value.trim() || '';
+      const setFilter = this._studentSetFilter || '';
       let url = '/students/index.php?';
       const params = [];
       if (status) params.push('status=' + encodeURIComponent(status));
       if (q) params.push('search=' + encodeURIComponent(q));
+      if (setFilter !== '') params.push('set_number=' + encodeURIComponent(setFilter));
       url += params.join('&');
       try {
         const res2 = await Admin.get(url);
         this._studentRows = res2.data || [];
         this.renderPagedTable({ ...stuOpts, rows: this._studentRows, page: 1 });
+        // Keep export title in sync with active set tab
+        if (this._exports?.students) {
+          const f = this._studentSetFilter || '';
+          let t = 'Students – All sets';
+          if (f) {
+            if (seniorSet && String(seniorSet.set_number) === f) t = `Students – Senior · Set ${f}`;
+            else if (juniorSet && String(juniorSet.set_number) === f) t = `Students – Junior · Set ${f}`;
+            else t = `Students – Set ${f}`;
+          }
+          this._exports.students.title = t;
+        }
       } catch (e) {
         Admin.toast(e.message, 'error');
       }
     };
 
+    // If a set tab was already selected from a prior visit, refetch filtered
+    if (this._studentSetFilter) {
+      await fetchStudents();
+    }
+
     document.getElementById('studentStatusFilter')?.addEventListener('change', fetchStudents);
     document.getElementById('studentSearch')?.addEventListener('input', () => {
       clearTimeout(searchTimer);
       searchTimer = setTimeout(fetchStudents, 300);
+    });
+
+    document.querySelectorAll('#studentSetTabs [data-set]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('#studentSetTabs .nav-link').forEach(l => l.classList.remove('active'));
+        btn.classList.add('active');
+        this._studentSetFilter = btn.dataset.set || '';
+        fetchStudents();
+      });
     });
   },
 
