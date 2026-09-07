@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Admin – MITRE</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+  <link href="assets/css/admin.css" rel="stylesheet">
+  <script>
+    // Apply theme before paint to avoid flash
+    (function () {
+      const t = localStorage.getItem('mitre-theme') || 'light';
+      document.documentElement.setAttribute('data-theme', t);
+    })();
+  </script>
+</head>
+<body>
+  <!-- Sidebar -->
+  <nav id="sidebar">
+    <div class="brand">
+      <i class="bi bi-mortarboard-fill brand-icon"></i>
+      <span class="brand-text">MITRE Admin</span>
+      <button class="btn btn-outline-light btn-sm d-lg-none ms-auto" id="sidebarClose" title="Close menu" aria-label="Close menu">
+        <i class="bi bi-x-lg"></i>
+      </button>
+    </div>
+
+    <div class="zone-badge" id="current-zone-badge">
+      <i class="bi bi-geo-alt me-1"></i> <span class="zone-text">Loading zone...</span>
+    </div>
+
+    <ul class="nav flex-column mt-2">
+      <li class="nav-item"><a class="nav-link active" href="#" data-page="dashboard" title="Dashboard"><i class="bi bi-speedometer2"></i> <span class="nav-label">Dashboard</span></a></li>
+      <li class="nav-item"><a class="nav-link" href="#" data-page="applications" title="Applications"><i class="bi bi-file-earmark-person"></i> <span class="nav-label">Applications</span></a></li>
+      <li class="nav-item"><a class="nav-link" href="#" data-page="students" title="Students"><i class="bi bi-people"></i> <span class="nav-label">Students</span></a></li>
+      <li class="nav-item"><a class="nav-link" href="#" data-page="conclaves" title="Conclaves"><i class="bi bi-calendar3"></i> <span class="nav-label">Conclaves</span></a></li>
+      <li class="nav-item"><a class="nav-link" href="#" data-page="attendance" title="Attendance"><i class="bi bi-clipboard-check"></i> <span class="nav-label">Attendance</span></a></li>
+      <li class="nav-item"><a class="nav-link" href="#" data-page="assessments" title="Assessments"><i class="bi bi-journal-text"></i> <span class="nav-label">Assessments</span></a></li>
+      <li class="nav-item"><a class="nav-link" href="#" data-page="results" title="Results"><i class="bi bi-bar-chart"></i> <span class="nav-label">Results</span></a></li>
+      <li class="nav-item"><a class="nav-link" href="#" data-page="probation" title="Probation"><i class="bi bi-exclamation-triangle"></i> <span class="nav-label">Probation</span></a></li>
+      <li class="nav-item"><a class="nav-link" href="#" data-page="sms" title="SMS Logs"><i class="bi bi-chat-dots"></i> <span class="nav-label">SMS Logs</span></a></li>
+    </ul>
+
+    <div class="mt-auto p-3 border-top border-secondary sidebar-footer">
+      <div class="small text-white-50 mb-1 sidebar-user-text" id="admin-name">—</div>
+      <div class="small text-white-50 mb-2 sidebar-user-text" id="admin-role">—</div>
+      <button class="btn btn-outline-light btn-sm w-100" onclick="Admin.logout()" title="Logout">
+        <i class="bi bi-box-arrow-right"></i> <span class="nav-label">Logout</span>
+      </button>
+    </div>
+  </nav>
+  <div id="sidebarBackdrop" class="d-lg-none" aria-hidden="true"></div>
+
+  <!-- Main -->
+  <div id="main">
+    <div id="topbar" class="d-flex align-items-center justify-content-between gap-2">
+      <div class="d-flex align-items-center gap-2">
+        <!-- Desktop sidebar collapse -->
+        <button class="btn btn-outline-secondary btn-sm d-none d-lg-inline-flex" id="sidebarCollapse" title="Toggle sidebar">
+          <i class="bi bi-layout-sidebar-inset"></i>
+        </button>
+        <!-- Mobile sidebar toggle -->
+        <button class="btn btn-outline-secondary btn-sm d-lg-none" id="sidebarToggle" title="Menu">
+          <i class="bi bi-list"></i>
+        </button>
+        <h5 class="mb-0 text-truncate" id="page-title">Dashboard</h5>
+      </div>
+      <div class="d-flex align-items-center gap-2 flex-shrink-0">
+        <select id="zoneSwitcher" class="form-select form-select-sm" style="width:auto;min-width:140px">
+          <option value="">Select zone...</option>
+        </select>
+        <button class="btn btn-outline-secondary btn-sm" id="btn-password" title="Change password" onclick="Pages.showChangePassword()">
+          <i class="bi bi-key"></i>
+        </button>
+        <!-- Site Settings (super_admin only) – moved from sidebar -->
+        <button class="btn btn-outline-secondary btn-sm d-none" id="btn-settings" title="Site Settings" onclick="document.getElementById('page-title').textContent='Site Settings'; document.querySelectorAll('#sidebar .nav-link').forEach(l=>l.classList.remove('active')); Pages.load('settings')">
+          <i class="bi bi-gear"></i>
+        </button>
+        <!-- Dark / Light mode -->
+        <button class="btn btn-outline-secondary btn-sm" id="themeToggle" title="Toggle dark/light mode">
+          <i class="bi bi-moon-stars" id="themeIcon"></i>
+        </button>
+      </div>
+    </div>
+
+    <div class="content-area" id="content">
+      <div class="text-center py-5 text-muted">Loading...</div>
+    </div>
+  </div>
+
+  <div id="toast-container"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="../assets/js/config.js"></script>
+  <script src="assets/js/admin.js"></script>
+  <script src="assets/js/pages.js"></script>
+  <script>
+    (async function init() {
+      const ok = await Admin.checkAuth();
+      if (!ok) {
+        location.href = 'login.html';
+        return;
+      }
+
+      Admin.updateUserInfo();
+      Admin.updateZoneBadge();
+
+      // Show Site Settings only for super_admin (now in header)
+      if (Admin.user && Admin.user.role === 'super_admin') {
+        const btn = document.getElementById('btn-settings');
+        if (btn) btn.classList.remove('d-none');
+      }
+
+      // Theme toggle
+      const themeBtn = document.getElementById('themeToggle');
+      const themeIcon = document.getElementById('themeIcon');
+      function applyThemeIcon() {
+        const t = document.documentElement.getAttribute('data-theme') || 'light';
+        themeIcon.className = t === 'dark' ? 'bi bi-sun' : 'bi bi-moon-stars';
+      }
+      applyThemeIcon();
+      themeBtn?.addEventListener('click', () => {
+        const cur = document.documentElement.getAttribute('data-theme') || 'light';
+        const next = cur === 'dark' ? 'light' : 'dark';
+        document.documentElement.setAttribute('data-theme', next);
+        localStorage.setItem('mitre-theme', next);
+        applyThemeIcon();
+      });
+
+      // Desktop sidebar collapse (icons only)
+      const collapseBtn = document.getElementById('sidebarCollapse');
+      const savedCollapsed = localStorage.getItem('mitre-sidebar') === 'collapsed';
+      if (savedCollapsed) document.body.classList.add('sidebar-collapsed');
+      collapseBtn?.addEventListener('click', () => {
+        document.body.classList.toggle('sidebar-collapsed');
+        localStorage.setItem(
+          'mitre-sidebar',
+          document.body.classList.contains('sidebar-collapsed') ? 'collapsed' : 'expanded'
+        );
+      });
+
+      // Load zones into switcher
+      const zones = await Admin.loadZones();
+      const sel = document.getElementById('zoneSwitcher');
+      sel.innerHTML = '<option value="">— Select Zone —</option>';
+      zones.forEach(z => {
+        const opt = document.createElement('option');
+        opt.value = z.id;
+        opt.textContent = `${z.name} (${z.code})`;
+        if (Admin.currentZone && Admin.currentZone.id == z.id) opt.selected = true;
+        sel.appendChild(opt);
+      });
+
+      sel.addEventListener('change', async () => {
+        const id = parseInt(sel.value);
+        if (!id) return;
+        try {
+          await Admin.switchZone(id);
+          Admin.toast('Zone switched to ' + Admin.currentZone.name);
+          const active = document.querySelector('#sidebar .nav-link.active');
+          if (active) active.click();
+        } catch (e) {
+          Admin.toast(e.message, 'error');
+        }
+      });
+
+      const sidebar = document.getElementById('sidebar');
+      const sidebarToggle = document.getElementById('sidebarToggle');
+      const sidebarClose = document.getElementById('sidebarClose');
+      const sidebarBackdrop = document.getElementById('sidebarBackdrop');
+
+      function setMobileSidebar(open) {
+        if (!sidebar) return;
+        const isMobile = window.innerWidth < 992;
+        if (!isMobile) return;
+        sidebar.classList.toggle('show', open);
+        sidebarBackdrop?.classList.toggle('show', open);
+      }
+
+      // Sidebar nav
+      document.querySelectorAll('#sidebar [data-page]').forEach(link => {
+        link.addEventListener('click', (e) => {
+          e.preventDefault();
+          document.querySelectorAll('#sidebar .nav-link').forEach(l => l.classList.remove('active'));
+          link.classList.add('active');
+          const page = link.dataset.page;
+          const label = link.querySelector('.nav-label');
+          document.getElementById('page-title').textContent = label ? label.textContent.trim() : link.textContent.trim();
+          Pages.load(page);
+          setMobileSidebar(false);
+        });
+      });
+
+      // Mobile sidebar toggle
+      sidebarToggle?.addEventListener('click', () => {
+        if (!sidebar) return;
+        const shouldOpen = !sidebar.classList.contains('show');
+        setMobileSidebar(shouldOpen);
+      });
+
+      sidebarClose?.addEventListener('click', () => setMobileSidebar(false));
+      sidebarBackdrop?.addEventListener('click', () => setMobileSidebar(false));
+
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') setMobileSidebar(false);
+      });
+
+      window.addEventListener('resize', () => {
+        if (window.innerWidth >= 992) {
+          sidebar?.classList.remove('show');
+          sidebarBackdrop?.classList.remove('show');
+        }
+      });
+
+      // Default page
+      Pages.load('dashboard');
+    })();
+  </script>
+</body>
+</html>

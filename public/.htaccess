@@ -1,0 +1,12 @@
+# Basic security & routing helpers (Apache)
+Options -Indexes
+
+# Protect sensitive directories
+RewriteEngine On
+
+# Deny access to config and includes from web
+RewriteRule ^(config|includes|sql|logs)/ - [F,L]
+
+# Optional: force HTTPS in production
+# RewriteCond %{HTTPS} off
+# RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
