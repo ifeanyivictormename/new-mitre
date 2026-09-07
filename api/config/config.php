@@ -17,17 +17,17 @@ date_default_timezone_set('Africa/Lagos');
 
 // Database credentials – change these for your environment
 define('DB_HOST', 'localhost');
-define('DB_NAME', 'training_school');
-define('DB_USER', 'root');
-define('DB_PASS', '');
+define('DB_NAME', 'leadstar_new-mitre');
+define('DB_USER', 'leadstar_new-mitre');
+define('DB_PASS', 'Avalanche@25');
 define('DB_CHARSET', 'utf8mb4');
 
 // Application
 define('APP_NAME', 'Minister Improvement and Training Retreat');
 // Backend / API base URL (no trailing slash). Used for CORS and building absolute upload URLs.
-define('APP_URL', 'http://localhost/mitre2/api');    // DEV – change to https://api.yourdomain.com on live
+define('APP_URL', 'https://new.mitre.com.ng/api');    // DEV – change to https://api.yourdomain.com on live
 // Frontend origin(s) allowed to call this API with credentials (comma-separated if multiple)
-define('FRONTEND_URL', 'http://localhost');          // DEV – origin only (no path). Live: https://yourdomain.com
+define('FRONTEND_URL', 'https://new.mitre.com.ng');          // DEV – origin only (no path). Live: https://yourdomain.com
 define('APP_VERSION', '1.0.0');
 
 // Session
