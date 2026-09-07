@@ -62,8 +62,6 @@ if ($method === 'GET') {
             s.address,
             s.state_of_origin,
             s.lga,
-            s.next_of_kin_name,
-            s.next_of_kin_phone,
             s.status AS student_status,
             z.id AS zone_id,
             z.name AS zone_name,
@@ -245,7 +243,7 @@ if ($method === 'PUT') {
         SELECT a.*, s.id AS student_id, s.phone AS student_phone, s.zone_id AS student_zone_id,
                s.first_name, s.last_name, s.other_names, s.email, s.gender,
                s.date_of_birth, s.address, s.state_of_origin, s.lga,
-               s.next_of_kin_name, s.next_of_kin_phone, s.status AS student_status
+               s.status AS student_status
         FROM applications a
         JOIN students s ON s.id = a.student_id
         WHERE a.id = ?
@@ -262,8 +260,7 @@ if ($method === 'PUT') {
 
     $studentFields = [
         'first_name', 'last_name', 'other_names', 'phone', 'email', 'gender',
-        'date_of_birth', 'address', 'state_of_origin', 'lga',
-        'next_of_kin_name', 'next_of_kin_phone'
+        'date_of_birth', 'address', 'state_of_origin', 'lga'
     ];
 
     $sets = [];

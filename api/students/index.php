@@ -69,7 +69,6 @@ if ($method === 'GET') {
         SELECT 
             s.id, s.phone, s.email, s.first_name, s.last_name, s.other_names,
             s.gender, s.date_of_birth, s.address, s.state_of_origin, s.lga,
-            s.next_of_kin_name, s.next_of_kin_phone,
             s.status, s.current_conclave, s.admission_year,
             s.set_number, s.reg_no,
             s.application_date, s.admission_date,
@@ -162,8 +161,6 @@ if ($method === 'PUT') {
         'address'           => 'string_null',
         'state_of_origin'   => 'string_null',
         'lga'               => 'string_null',
-        'next_of_kin_name'  => 'string_null',
-        'next_of_kin_phone' => 'string_null',
         'reg_no'            => 'string_null',
         'set_number'        => 'int_null',
         'current_conclave'  => 'int_conclave',

@@ -15,9 +15,7 @@
  *   "date_of_birth": "1995-05-15",
  *   "address": "...",
  *   "state_of_origin": "Lagos",
- *   "lga": "...",
- *   "next_of_kin_name": "...",
- *   "next_of_kin_phone": "..."
+ *   "lga": "..."
  * }
  */
 
@@ -59,9 +57,6 @@ $dob            = !empty($input['date_of_birth']) ? $input['date_of_birth'] : nu
 $address        = trim($input['address'] ?? '') ?: null;
 $stateOfOrigin  = trim($input['state_of_origin'] ?? '') ?: null;
 $lga            = trim($input['lga'] ?? '') ?: null;
-$nokName        = trim($input['next_of_kin_name'] ?? '') ?: null;
-$nokPhoneRaw    = trim($input['next_of_kin_phone'] ?? '');
-$nokPhone       = $nokPhoneRaw ? normalizePhone($nokPhoneRaw) : null;
 
 $pdo = db();
 
@@ -97,19 +92,16 @@ try {
         INSERT INTO students (
             zone_id, phone, email, first_name, last_name, other_names,
             gender, date_of_birth, address, state_of_origin, lga,
-            next_of_kin_name, next_of_kin_phone,
             status, application_date, current_conclave
         ) VALUES (
             ?, ?, ?, ?, ?, ?,
             ?, ?, ?, ?, ?,
-            ?, ?,
             'applicant', NOW(), 0
         )
     ");
     $stmt->execute([
         $zoneId, $phone, $email, $firstName, $lastName, $otherNames,
-        $gender, $dob, $address, $stateOfOrigin, $lga,
-        $nokName, $nokPhone
+        $gender, $dob, $address, $stateOfOrigin, $lga
     ]);
 
     $studentId = (int)$pdo->lastInsertId();

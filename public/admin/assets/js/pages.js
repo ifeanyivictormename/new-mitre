@@ -505,8 +505,6 @@ const Pages = {
       document.getElementById('editAppAddress').value = row.address || '';
       document.getElementById('editAppState').value = row.state_of_origin || '';
       document.getElementById('editAppLga').value = row.lga || '';
-      document.getElementById('editAppKinName').value = row.next_of_kin_name || '';
-      document.getElementById('editAppKinPhone').value = row.next_of_kin_phone || '';
       document.getElementById('editAppNotes').value = row.review_notes || '';
       const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('editAppModal'));
       modal.show();
@@ -529,8 +527,6 @@ const Pages = {
       address: document.getElementById('editAppAddress').value.trim(),
       state_of_origin: document.getElementById('editAppState').value.trim(),
       lga: document.getElementById('editAppLga').value.trim(),
-      next_of_kin_name: document.getElementById('editAppKinName').value.trim(),
-      next_of_kin_phone: document.getElementById('editAppKinPhone').value.trim(),
       review_notes: document.getElementById('editAppNotes').value.trim()
     };
     if (!body.first_name || !body.last_name || !body.phone) {
@@ -761,14 +757,6 @@ const Pages = {
                   <label class="form-label">LGA</label>
                   <input type="text" class="form-control" id="editStuLga">
                 </div>
-                <div class="col-md-4">
-                  <label class="form-label">Next of kin</label>
-                  <input type="text" class="form-control" id="editStuKinName">
-                </div>
-                <div class="col-md-4">
-                  <label class="form-label">Next of kin phone</label>
-                  <input type="text" class="form-control" id="editStuKinPhone">
-                </div>
               </div>
             </div>
             <div class="modal-footer">
@@ -806,8 +794,6 @@ const Pages = {
       document.getElementById('editStuAddress').value = row.address || '';
       document.getElementById('editStuState').value = row.state_of_origin || '';
       document.getElementById('editStuLga').value = row.lga || '';
-      document.getElementById('editStuKinName').value = row.next_of_kin_name || '';
-      document.getElementById('editStuKinPhone').value = row.next_of_kin_phone || '';
       bootstrap.Modal.getOrCreateInstance(document.getElementById('editStudentModal')).show();
     } catch (e) {
       Admin.toast(e.message, 'error');
@@ -832,9 +818,7 @@ const Pages = {
       reg_no: document.getElementById('editStuRegNo').value.trim(),
       address: document.getElementById('editStuAddress').value.trim(),
       state_of_origin: document.getElementById('editStuState').value.trim(),
-      lga: document.getElementById('editStuLga').value.trim(),
-      next_of_kin_name: document.getElementById('editStuKinName').value.trim(),
-      next_of_kin_phone: document.getElementById('editStuKinPhone').value.trim()
+      lga: document.getElementById('editStuLga').value.trim()
     };
     if (!body.first_name || !body.last_name || !body.phone) {
       Admin.toast('First name, last name and phone are required', 'error');
@@ -981,8 +965,6 @@ const Pages = {
               <div class="card-body profile-kv-grid">
                 ${this._kv('Phone', s.phone)}
                 ${this._kv('Email', s.email)}
-                ${this._kv('Next of kin', s.next_of_kin_name)}
-                ${this._kv('Next of kin phone', s.next_of_kin_phone)}
               </div>
             </div>
           </div>
