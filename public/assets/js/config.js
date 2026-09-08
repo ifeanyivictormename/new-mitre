@@ -10,7 +10,7 @@
 //window.API_BASE = 'http://localhost/mitre2/api';
 
 // LIVE – comment the line above and uncomment this when you deploy
- window.API_BASE = 'https://new.mitre.com.ng/api';
+ window.API_BASE = 'https://api.leadstar.com.ng/mitre';
 
 // Helper: apiUrl('/students/register.php') → full URL
 window.apiUrl = function (path) {
