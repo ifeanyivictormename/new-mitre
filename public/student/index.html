@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Student Portal | MITRE</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="../assets/css/bootstrap.css" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
   <style>
     body { background: #f1f5f9; }
@@ -18,7 +18,7 @@
       <a class="navbar-brand fw-bold" href="#"><i class="bi bi-mortarboard-fill text-primary me-1"></i> MITRE</a>
       <div class="d-flex align-items-center gap-3">
         <span class="text-muted small" id="studentName">—</span>
-        <button class="btn btn-outline-secondary btn-sm" onclick="logout()">Logout</button>
+        <button class="btn btn-outline-secondary rounded-5 btn-sm" onclick="logout()">Logout</button>
       </div>
     </div>
   </nav>
@@ -83,7 +83,7 @@
             </tr>
           </thead>
           <tbody id="resultsBody">
-            <tr><td colspan="8" class="text-center text-muted">Loading...</td></tr>
+            <tr><td colspan="7" class="text-center text-muted">Loading...</td></tr>
           </tbody>
         </table>
       </div>
@@ -115,14 +115,31 @@
         const rData = await rRes.json();
         const rows = rData.data || [];
 
-        const latestResultSeq = rows.reduce((max, r) => {
-          const seq = Number(r?.sequence || 0);
-          return seq > max ? seq : max;
-        }, 0);
-        const conclaveKpi = Number(u.current_conclave || 0) > 0
-          ? Number(u.current_conclave)
-          : (latestResultSeq > 0 ? latestResultSeq : 0);
-        document.getElementById('studentConclave').textContent = conclaveKpi;
+        const setCurrentConclave = Number(u.set_current_sequence || 0);
+        const currentConclave = Number(u.current_conclave || 0);
+        let conclaveText = '—';
+
+        if (setCurrentConclave > 0) {
+          conclaveText = 'Conclave ' + setCurrentConclave;
+        } else if (currentConclave > 0) {
+          conclaveText = 'Conclave ' + currentConclave;
+        } else if (rows.length) {
+          const latest = rows.reduce((best, row) => {
+            const bestYear = Number(best?.year || 0);
+            const rowYear = Number(row?.year || 0);
+            if (rowYear > bestYear) return row;
+            if (rowYear < bestYear) return best;
+
+            const bestSeq = Number(best?.sequence || 0);
+            const rowSeq = Number(row?.sequence || 0);
+            return rowSeq >= bestSeq ? row : best;
+          }, rows[0]);
+
+          const seq = Number(latest?.sequence || 0);
+          conclaveText = seq > 0 ? ('Conclave ' + seq) : '—';
+        }
+
+        document.getElementById('studentConclave').textContent = conclaveText;
 
         document.getElementById('resultsBody').innerHTML = rows.length
           ? rows.map(r => `
@@ -136,7 +153,7 @@
               <td><strong>${r.total_score}</strong></td>
             </tr>
           `).join('')
-          : '<tr><td colspan="8" class="text-center text-muted">No results yet</td></tr>';
+          : '<tr><td colspan="7" class="text-center text-muted">No results yet</td></tr>';
       } catch {
         location.href = 'login.html';
       }

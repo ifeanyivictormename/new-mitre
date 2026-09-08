@@ -115,6 +115,20 @@ function studentLogin(string $phone): array {
     $_SESSION['set_number'] = $student['set_number'] !== null ? (int)$student['set_number'] : null;
     $_SESSION['reg_no']     = $student['reg_no'] ?? null;
     $_SESSION['current_conclave'] = (int)$student['current_conclave'];
+    $_SESSION['set_current_sequence'] = 0;
+
+    try {
+        if ($_SESSION['set_number'] !== null) {
+            $setStmt = $pdo->prepare("SELECT current_sequence FROM sets WHERE set_number = ? LIMIT 1");
+            $setStmt->execute([$_SESSION['set_number']]);
+            $setRow = $setStmt->fetch();
+            if ($setRow) {
+                $_SESSION['set_current_sequence'] = (int)($setRow['current_sequence'] ?? 0);
+            }
+        }
+    } catch (Throwable $e) {
+        // Keep login working even if sets table/schema is unavailable.
+    }
 
     return [
         'success' => true,
@@ -128,7 +142,8 @@ function studentLogin(string $phone): array {
             'status'          => $student['status'],
             'set_number'      => $_SESSION['set_number'],
             'reg_no'          => $_SESSION['reg_no'],
-            'current_conclave'=> (int)$student['current_conclave']
+            'current_conclave'=> (int)$student['current_conclave'],
+            'set_current_sequence' => $_SESSION['set_current_sequence']
         ]
     ];
 }
@@ -187,7 +202,8 @@ function requireStudent(): array {
         'status'          => $_SESSION['status'] ?? '',
         'set_number'      => isset($_SESSION['set_number']) ? $_SESSION['set_number'] : null,
         'reg_no'          => $_SESSION['reg_no'] ?? null,
-        'current_conclave'=> isset($_SESSION['current_conclave']) ? (int)$_SESSION['current_conclave'] : 0
+        'current_conclave'=> isset($_SESSION['current_conclave']) ? (int)$_SESSION['current_conclave'] : 0,
+        'set_current_sequence' => isset($_SESSION['set_current_sequence']) ? (int)$_SESSION['set_current_sequence'] : 0
     ];
 }
 
@@ -217,12 +233,13 @@ function currentUser(): ?array {
         $setNumber = isset($_SESSION['set_number']) ? $_SESSION['set_number'] : null;
         $regNo = $_SESSION['reg_no'] ?? null;
         $currentConclave = isset($_SESSION['current_conclave']) ? (int)$_SESSION['current_conclave'] : 0;
+        $setCurrentSequence = isset($_SESSION['set_current_sequence']) ? (int)$_SESSION['set_current_sequence'] : 0;
 
         // Keep student dashboard KPIs current even when the session predates admin updates.
         if ($studentId > 0) {
             try {
                 $pdo = db();
-                $stmt = $pdo->prepare("SELECT zone_id, status, set_number, reg_no, current_conclave FROM students WHERE id = ? LIMIT 1");
+                $stmt = $pdo->prepare("\n                    SELECT s.zone_id, s.status, s.set_number, s.reg_no, s.current_conclave,\n                           st.current_sequence AS set_current_sequence\n                    FROM students s\n                    LEFT JOIN sets st ON st.set_number = s.set_number\n                    WHERE s.id = ?\n                    LIMIT 1\n                ");
                 $stmt->execute([$studentId]);
                 $row = $stmt->fetch();
                 if ($row) {
@@ -231,6 +248,7 @@ function currentUser(): ?array {
                     $setNumber = $row['set_number'] !== null ? (int)$row['set_number'] : null;
                     $regNo = $row['reg_no'] ?? null;
                     $currentConclave = (int)($row['current_conclave'] ?? 0);
+                    $setCurrentSequence = (int)($row['set_current_sequence'] ?? 0);
 
                     $_SESSION['zone_id'] = $zoneId;
                     $_SESSION['current_zone_id'] = $zoneId;
@@ -238,6 +256,7 @@ function currentUser(): ?array {
                     $_SESSION['set_number'] = $setNumber;
                     $_SESSION['reg_no'] = $regNo;
                     $_SESSION['current_conclave'] = $currentConclave;
+                    $_SESSION['set_current_sequence'] = $setCurrentSequence;
                 }
             } catch (Throwable $e) {
                 // Fallback to session snapshot if database refresh fails.
@@ -254,7 +273,8 @@ function currentUser(): ?array {
             'status'          => $status,
             'set_number'      => $setNumber,
             'reg_no'          => $regNo,
-            'current_conclave'=> $currentConclave
+            'current_conclave'=> $currentConclave,
+            'set_current_sequence' => $setCurrentSequence
         ];
     }
     return null;
