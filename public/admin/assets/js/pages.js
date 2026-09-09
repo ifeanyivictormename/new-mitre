@@ -1374,8 +1374,8 @@ const Pages = {
             <div class="col-md-2"><label class="form-label">Short (5)</label><input type="number" step="0.5" max="5" class="form-control as-field" id="asShort"></div>
             <div class="col-md-2"><label class="form-label">Long (10)</label><input type="number" step="0.5" max="10" class="form-control as-field" id="asLong"></div>
             <div class="col-md-2"><label class="form-label">Term (30)</label><input type="number" step="0.5" max="30" class="form-control as-field" id="asTerm"></div>
-            <div class="col-md-2"><label class="form-label">Source Conclave ID</label><input type="hidden" class="form-control as-field" id="asSource" placeholder="for term paper"></div>
-            <div class="col-md-2"><label class="form-label">Oversight (5)</label><input type="hidden" step="0.5" max="5" class="form-control as-field" id="asOversight" value="0"></div>
+            <input type="hidden" class="form-control as-field" id="asSource" placeholder="for term paper">
+            <input type="hidden" step="0.5" max="5" class="form-control as-field" id="asOversight" value="0">
           </div>
           <button class="btn btn-primary mt-3" id="asSaveBtn" onclick="Pages.saveAssessments()">Save & Compute Result</button>
         </div>
