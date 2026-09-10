@@ -1649,8 +1649,25 @@ const Pages = {
 
   // -------------------- RESULTS --------------------
   async results() {
-    const conclaves = (await Admin.get('/conclaves/index.php')).data || [];
+    const [conclavesRes, zonesRes] = await Promise.all([
+      Admin.get('/conclaves/index.php'),
+      Admin.get('/zones/index.php?active=1').catch(() => ({ data: [] }))
+    ]);
+    const conclaves = conclavesRes.data || [];
+    const zones = zonesRes.data || [];
     const options = conclaves.map(c => `<option value="${c.id}">${c.title || 'Seq '+c.sequence} (${c.year})</option>`).join('');
+    const isSuper = Admin.user?.role === 'super_admin';
+    if (this._resultZoneFilter === undefined || this._resultZoneFilter === null) {
+      this._resultZoneFilter = isSuper ? '' : String(Admin.currentZone?.id || '');
+    }
+    const zoneOptions = [
+      isSuper ? '<option value="">All zones</option>' : '',
+      ...zones.map(z => {
+        const val = String(z.id);
+        const selected = String(this._resultZoneFilter || '') === val ? 'selected' : '';
+        return `<option value="${val}" ${selected}>${z.name} (${z.code})</option>`;
+      })
+    ].join('');
     this._resultRows = [];
 
     this.content.innerHTML = `
@@ -1658,6 +1675,9 @@ const Pages = {
         <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
           <span class="fw-semibold">Results</span>
           <div class="d-flex gap-2 align-items-center flex-wrap">
+            <select class="form-select form-select-sm" id="resZone" style="width:auto">
+              ${zoneOptions}
+            </select>
             <select class="form-select form-select-sm" id="resConclave" style="width:auto">
               <option value="">All conclaves</option>
               ${options}
@@ -1706,11 +1726,23 @@ const Pages = {
         total_score: r.total_score
       }))
     });
+
+    const zoneSelect = document.getElementById('resZone');
+    if (zoneSelect) {
+      zoneSelect.value = String(this._resultZoneFilter || '');
+      zoneSelect.addEventListener('change', () => {
+        this._resultZoneFilter = zoneSelect.value || '';
+      });
+    }
   },
 
   async loadResults() {
     const cid = document.getElementById('resConclave').value;
-    const url = cid ? `/assessments/results.php?conclave_id=${cid}` : '/assessments/results.php';
+    const zid = document.getElementById('resZone')?.value || '';
+    const params = [];
+    if (cid) params.push('conclave_id=' + encodeURIComponent(cid));
+    if (zid) params.push('zone_id=' + encodeURIComponent(zid));
+    const url = '/assessments/results.php' + (params.length ? ('?' + params.join('&')) : '');
     try {
       const res = await Admin.get(url);
       const rows = this._sortByStudentName(res.data || []);

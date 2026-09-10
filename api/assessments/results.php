@@ -21,6 +21,7 @@ if (!$user) {
 $pdo = db();
 $conclaveId = (int)($_GET['conclave_id'] ?? 0);
 $studentId  = (int)($_GET['student_id'] ?? 0);
+$zoneId     = (int)($_GET['zone_id'] ?? 0);
 
 // Student can only see their own results
 if ($user['type'] === 'student') {
@@ -48,6 +49,12 @@ if ($conclaveId > 0) {
 if ($studentId > 0) {
     $sql .= " AND r.student_id = ?";
     $params[] = $studentId;
+}
+
+// Optional zone filter for super_admin.
+if ($user['type'] === 'admin' && $user['role'] === 'super_admin' && $zoneId > 0) {
+    $sql .= " AND s.zone_id = ?";
+    $params[] = $zoneId;
 }
 
 // Zone restriction for regular admin
