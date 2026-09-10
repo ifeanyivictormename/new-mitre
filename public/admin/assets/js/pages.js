@@ -1311,7 +1311,7 @@ const Pages = {
               <div id="attSuggest" class="list-group position-absolute w-100 shadow-sm" style="z-index:50;display:none;max-height:220px;overflow-y:auto"></div>
             </div>
             <div class="col-md-2">
-              <button class="btn btn-primary w-100" onclick="Pages.loadAttendanceForm()">Load</button>
+              <button class="btn btn-primary w-100" id="attLoadBtn" onclick="Pages.loadAttendanceForm()">Load</button>
             </div>
           </div>
           <div id="attForm" class="mt-4"></div>
@@ -1328,9 +1328,34 @@ const Pages = {
   async loadAttendanceForm() {
     const conclaveId = document.getElementById('attConclave').value;
     const studentId = document.getElementById('attStudentId').value;
+    const loadBtn = document.getElementById('attLoadBtn');
     if (!conclaveId || !studentId) {
       Admin.toast('Select a conclave and choose a student from the suggestions', 'error');
       return;
+    }
+
+    const attForm = document.getElementById('attForm');
+    if (attForm) {
+      attForm.innerHTML = `
+        <div class="card border-0 shadow-sm">
+          <div class="card-body">
+            <div class="d-flex align-items-center gap-2 mb-2">
+              <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+              <span class="small text-muted">Loading attendance records...</span>
+            </div>
+            <div class="placeholder-glow">
+              <span class="placeholder col-5 mb-2"></span>
+              <span class="placeholder col-12 mb-2"></span>
+              <span class="placeholder col-12 mb-2"></span>
+              <span class="placeholder col-12"></span>
+            </div>
+          </div>
+        </div>`;
+    }
+
+    if (loadBtn) {
+      loadBtn.disabled = true;
+      loadBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status"></span>Loading...';
     }
 
     const cMeta = this._conclaveMap?.[conclaveId];
@@ -1341,6 +1366,12 @@ const Pages = {
       const res = await Admin.get(`/attendance/index.php?conclave_id=${conclaveId}&student_id=${studentId}`);
       existing = res.data || [];
     } catch {}
+    finally {
+      if (loadBtn) {
+        loadBtn.disabled = false;
+        loadBtn.textContent = 'Load';
+      }
+    }
 
     const getVal = (day, session) => {
       const found = existing.find(e => e.day_number == day && e.session === session);
@@ -1364,7 +1395,7 @@ const Pages = {
     }
     html += `</tbody></table>`;
     if (isOpen) {
-      html += `<button class="btn btn-success" onclick="Pages.saveAttendance(${conclaveId},${studentId})">Save Attendance</button>`;
+      html += `<button class="btn btn-success" id="attSaveBtn" onclick="Pages.saveAttendance(${conclaveId},${studentId})">Save Attendance</button>`;
     }
     html += `</div>`;
 
@@ -1372,6 +1403,11 @@ const Pages = {
   },
 
   async saveAttendance(conclaveId, studentId) {
+    const saveBtn = document.getElementById('attSaveBtn');
+    if (saveBtn) {
+      saveBtn.disabled = true;
+      saveBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status"></span>Saving...';
+    }
     const records = [];
     document.querySelectorAll('.att-check').forEach(cb => {
       records.push({
@@ -1385,6 +1421,11 @@ const Pages = {
       Admin.toast('Attendance saved');
     } catch (e) {
       Admin.toast(e.message, 'error');
+    } finally {
+      if (saveBtn) {
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'Save Attendance';
+      }
     }
   },
 
@@ -1415,9 +1456,10 @@ const Pages = {
               <div id="asSuggest" class="list-group position-absolute w-100 shadow-sm" style="z-index:50;display:none;max-height:220px;overflow-y:auto"></div>
             </div>
             <div class="col-md-2">
-              <button class="btn btn-outline-primary w-100" onclick="Pages.loadAssessmentScores()">Load scores</button>
+              <button class="btn btn-outline-primary w-100" id="asLoadBtn" onclick="Pages.loadAssessmentScores()">Load scores</button>
             </div>
           </div>
+          <div id="asLoadState" class="mt-3"></div>
           <div id="asClosedBanner" class="mt-3"></div>
           <div class="row g-3 mt-1">
             <div class="col-md-2"><label class="form-label">Summary (5)</label><input type="number" step="0.5" max="5" class="form-control as-field" id="asSummary"></div>
@@ -1459,10 +1501,38 @@ const Pages = {
   async loadAssessmentScores() {
     const conclaveId = document.getElementById('asConclave').value;
     const studentId = document.getElementById('asStudentId').value;
+    const loadBtn = document.getElementById('asLoadBtn');
+    const loadState = document.getElementById('asLoadState');
     if (!conclaveId || !studentId) {
       Admin.toast('Select conclave and student first', 'error');
       return;
     }
+
+    if (loadState) {
+      loadState.innerHTML = `
+        <div class="card border-0 shadow-sm">
+          <div class="card-body py-2">
+            <div class="d-flex align-items-center gap-2 mb-2">
+              <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+              <span class="small text-muted">Loading scores...</span>
+            </div>
+            <div class="placeholder-glow">
+              <span class="placeholder col-12 mb-2"></span>
+              <span class="placeholder col-8"></span>
+            </div>
+          </div>
+        </div>`;
+    }
+
+    if (loadBtn) {
+      loadBtn.disabled = true;
+      loadBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status"></span>Loading...';
+    }
+
+    const fields = Array.from(document.querySelectorAll('.as-field'));
+    const prevDisabled = fields.map(el => !!el.disabled);
+    fields.forEach(el => { el.disabled = true; });
+
     this._applyAssessmentLock();
     try {
       const [aRes, rRes] = await Promise.all([
@@ -1494,10 +1564,21 @@ const Pages = {
       }
     } catch (e) {
       Admin.toast(e.message, 'error');
+    } finally {
+      if (loadBtn) {
+        loadBtn.disabled = false;
+        loadBtn.textContent = 'Load scores';
+      }
+      if (loadState) {
+        loadState.innerHTML = '';
+      }
+      fields.forEach((el, i) => { el.disabled = prevDisabled[i]; });
+      this._applyAssessmentLock();
     }
   },
 
   async saveAssessments() {
+    const saveBtn = document.getElementById('asSaveBtn');
     const studentId = parseInt(document.getElementById('asStudentId').value);
     if (!studentId) {
       Admin.toast('Please select a student from the name suggestions', 'error');
@@ -1550,10 +1631,19 @@ const Pages = {
     if (oversight !== '') body.oversight = parseFloat(oversight);
 
     try {
+      if (saveBtn) {
+        saveBtn.disabled = true;
+        saveBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status"></span>Saving...';
+      }
       await Admin.post('/assessments/index.php', body);
       Admin.toast('Assessments saved and result computed');
     } catch (e) {
       Admin.toast(e.message, 'error');
+    } finally {
+      if (saveBtn) {
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'Save & Compute Result';
+      }
     }
   },
 
