@@ -1691,10 +1691,10 @@ const Pages = {
             <thead>
               <tr>
                 <th>Student</th><th>Conclave</th><th>Att (45)</th><th>Sum (5)</th><th>Short (5)</th>
-                <th>Long (10)</th><th>Term (30)</th><th>Over (5)</th><th>Total</th>
+                <th>Long (10)</th><th>Term (30)</th><th>Total</th>
               </tr>
             </thead>
-            <tbody id="resultsBody"><tr><td colspan="9" class="text-center text-muted">Select a conclave and click Load</td></tr></tbody>
+            <tbody id="resultsBody"><tr><td colspan="8" class="text-center text-muted">Select a conclave and click Load</td></tr></tbody>
           </table>
         </div>
         <div id="resultsPager"></div>
@@ -1757,7 +1757,6 @@ const Pages = {
           <td>${r.short_paper_score}</td>
           <td>${r.long_paper_score}</td>
           <td>${r.term_paper_score}</td>
-          <td>${r.oversight_score}</td>
           <td><strong>${r.total_score}</strong></td>
         </tr>`;
 
@@ -1767,7 +1766,7 @@ const Pages = {
         rowHtml,
         tbodyId: 'resultsBody',
         pagerId: 'resultsPager',
-        colspan: 9,
+        colspan: 8,
         emptyText: 'No results',
         page: 1
       });
