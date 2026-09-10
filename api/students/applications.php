@@ -94,7 +94,7 @@ if ($method === 'GET') {
         $params = array_merge($params, [$term, $term, $term, $term]);
     }
 
-    $sql .= " ORDER BY a.created_at DESC LIMIT 300";
+    $sql .= " ORDER BY s.first_name ASC, s.last_name ASC, a.created_at DESC LIMIT 300";
 
     $stmt = $pdo->prepare($sql);
     $stmt->execute($params);

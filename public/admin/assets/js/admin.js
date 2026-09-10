@@ -128,6 +128,20 @@ const Admin = {
     if (roleEl) roleEl.textContent = this.user?.role === 'super_admin' ? 'Super Admin' : 'Admin';
   },
 
+  async refreshApplicationsBadge() {
+    const badge = document.getElementById('nav-app-count');
+    if (!badge) return;
+    try {
+      const res = await this.get('/students/applications.php?status=pending');
+      const count = Array.isArray(res.data) ? res.data.length : 0;
+      badge.textContent = String(count);
+      badge.classList.toggle('d-none', count <= 0);
+    } catch (_) {
+      // Keep UI resilient if this request fails.
+      badge.classList.add('d-none');
+    }
+  },
+
   toast(message, type = 'success') {
     const container = document.getElementById('toast-container') || document.body;
     const id = 'toast-' + Date.now();

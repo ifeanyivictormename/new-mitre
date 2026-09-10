@@ -142,6 +142,7 @@ function detectProbationCandidates(PDO $pdo, ?int $zoneId = null): array {
         $sql .= " AND s.zone_id = ?";
         $params[] = $zoneId;
     }
+    $sql .= " ORDER BY s.first_name ASC, s.last_name ASC";
 
     $stmt = $pdo->prepare($sql);
     $stmt->execute($params);

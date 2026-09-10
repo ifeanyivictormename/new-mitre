@@ -152,8 +152,8 @@ if ($method === 'GET') {
     }
 
     $sql .= "\n        ORDER BY
-            COALESCE(s.last_name, '') ASC,
             COALESCE(s.first_name, '') ASC,
+            COALESCE(s.last_name, '') ASC,
             COALESCE(s.other_names, '') ASC,
             s.id ASC
         LIMIT 200

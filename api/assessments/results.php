@@ -56,7 +56,7 @@ if ($user['type'] === 'admin' && $user['role'] === 'admin' && !empty($user['zone
     $params[] = $user['zone_id'];
 }
 
-$sql .= " ORDER BY c.year DESC, c.sequence ASC, s.last_name";
+$sql .= " ORDER BY s.first_name ASC, s.last_name ASC, c.year DESC, c.sequence ASC";
 
 $stmt = $pdo->prepare($sql);
 $stmt->execute($params);

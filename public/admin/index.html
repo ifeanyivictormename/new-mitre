@@ -32,7 +32,7 @@
 
     <ul class="nav flex-column mt-2">
       <li class="nav-item"><a class="nav-link active" href="#" data-page="dashboard" title="Dashboard"><i class="bi bi-speedometer2"></i> <span class="nav-label">Dashboard</span></a></li>
-      <li class="nav-item"><a class="nav-link" href="#" data-page="applications" title="Applications"><i class="bi bi-file-earmark-person"></i> <span class="nav-label">Applications</span></a></li>
+      <li class="nav-item"><a class="nav-link" href="#" data-page="applications" title="Applications"><i class="bi bi-file-earmark-person"></i> <span class="nav-label">Applications</span> <span class="badge bg-danger ms-auto d-none" id="nav-app-count">0</span></a></li>
       <li class="nav-item"><a class="nav-link" href="#" data-page="students" title="Students"><i class="bi bi-people"></i> <span class="nav-label">Students</span></a></li>
       <li class="nav-item"><a class="nav-link" href="#" data-page="conclaves" title="Conclaves"><i class="bi bi-calendar3"></i> <span class="nav-label">Conclaves</span></a></li>
       <li class="nav-item"><a class="nav-link" href="#" data-page="attendance" title="Attendance"><i class="bi bi-clipboard-check"></i> <span class="nav-label">Attendance</span></a></li>
@@ -105,6 +105,7 @@
 
       Admin.updateUserInfo();
       Admin.updateZoneBadge();
+      await Admin.refreshApplicationsBadge();
 
       // Show Site Settings only for super_admin (now in header)
       if (Admin.user && Admin.user.role === 'super_admin') {
@@ -157,6 +158,7 @@
         if (!id) return;
         try {
           await Admin.switchZone(id);
+          await Admin.refreshApplicationsBadge();
           Admin.toast('Zone switched to ' + Admin.currentZone.name);
           const active = document.querySelector('#sidebar .nav-link.active');
           if (active) active.click();

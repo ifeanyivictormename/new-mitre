@@ -24,7 +24,6 @@
   <div class="container">
     <div class="card form-card">
       <div class="card-body p-4 p-md-5">
-        <div id="alert" class="alert d-none"></div>
         <form id="regForm">
           <div class="row g-3">
             <div class="col-md-6">
@@ -87,15 +86,40 @@
     </div>
   </div>
 
+  <div id="toast-container" style="position:fixed;bottom:20px;right:20px;z-index:2000"></div>
+
   <script src="../assets/js/config.js"></script>
   <script>
     const API = (window.API_BASE || '').replace(/\/$/, '');
+    const qs = new URLSearchParams(window.location.search);
+    const preselectZoneId = qs.get('zone_id');
+
+    function showToast(message, type = 'success') {
+      const container = document.getElementById('toast-container') || document.body;
+      const id = 'toast-' + Date.now() + '-' + Math.floor(Math.random() * 1000);
+      const bg = type === 'error' ? 'bg-danger' : 'bg-success';
+      const html = `
+        <div id="${id}" class="toast align-items-center text-white ${bg} border-0 show" role="alert" style="min-width:280px">
+          <div class="d-flex">
+            <div class="toast-body">${message}</div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" aria-label="Close"></button>
+          </div>
+        </div>`;
+      container.insertAdjacentHTML('beforeend', html);
+      const el = document.getElementById(id);
+      el?.querySelector('.btn-close')?.addEventListener('click', () => el.remove());
+      setTimeout(() => el?.remove(), 4500);
+    }
+
     fetch(API + '/zones/public.php').then(r => r.json()).then(d => {
       if (d.success) {
         const sel = document.getElementById('zone_id');
         d.data.forEach(z => {
           const o = document.createElement('option');
           o.value = z.id; o.textContent = z.name + ' (' + z.code + ')';
+          if (preselectZoneId && String(z.id) === String(preselectZoneId)) {
+            o.selected = true;
+          }
           sel.appendChild(o);
         });
       }
@@ -104,9 +128,7 @@
     document.getElementById('regForm').addEventListener('submit', async (e) => {
       e.preventDefault();
       const btn = document.getElementById('btnSubmit');
-      const alert = document.getElementById('alert');
       btn.disabled = true;
-      alert.classList.add('d-none');
 
       const body = {
         first_name: document.getElementById('first_name').value.trim(),
@@ -139,17 +161,13 @@
           throw new Error(data.message || `Request failed (HTTP ${res.status})`);
         }
         if (data.success) {
-          alert.className = 'alert alert-success';
-          alert.textContent = data.message;
-          alert.classList.remove('d-none');
+          showToast(data.message || 'Application submitted successfully');
           e.target.reset();
         } else {
           throw new Error(data.message || 'Application failed');
         }
       } catch (err) {
-        alert.className = 'alert alert-danger';
-        alert.textContent = err.message;
-        alert.classList.remove('d-none');
+        showToast(err.message || 'Registration failed', 'error');
       } finally {
         btn.disabled = false;
       }

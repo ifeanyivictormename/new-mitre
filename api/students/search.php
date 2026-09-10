@@ -66,7 +66,7 @@ try {
         $sql .= " AND s.zone_id = ?";
         $params[] = $zoneId;
     }
-    $sql .= " ORDER BY s.last_name, s.first_name LIMIT 15";
+    $sql .= " ORDER BY s.first_name ASC, s.last_name ASC LIMIT 15";
     $stmt = $pdo->prepare($sql);
     $stmt->execute($params);
     $rows = $stmt->fetchAll();
@@ -78,7 +78,7 @@ try {
         $sql .= " AND s.zone_id = ?";
         $params[] = $zoneId;
     }
-    $sql .= " ORDER BY s.last_name, s.first_name LIMIT 15";
+    $sql .= " ORDER BY s.first_name ASC, s.last_name ASC LIMIT 15";
     $stmt = $pdo->prepare($sql);
     $stmt->execute($params);
     $rows = $stmt->fetchAll();

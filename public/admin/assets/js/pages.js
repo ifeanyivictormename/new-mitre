@@ -89,6 +89,28 @@ const Pages = {
     return buttons.join('');
   },
 
+  _sortByStudentName(rows, fullNameKey = null) {
+    const list = Array.isArray(rows) ? [...rows] : [];
+    return list.sort((a, b) => {
+      let aName = '';
+      let bName = '';
+      if (fullNameKey) {
+        aName = String(a?.[fullNameKey] || '').trim().toLowerCase();
+        bName = String(b?.[fullNameKey] || '').trim().toLowerCase();
+      } else {
+        const aFirst = String(a?.first_name || '').trim().toLowerCase();
+        const aLast = String(a?.last_name || '').trim().toLowerCase();
+        const bFirst = String(b?.first_name || '').trim().toLowerCase();
+        const bLast = String(b?.last_name || '').trim().toLowerCase();
+        aName = `${aFirst} ${aLast}`.trim();
+        bName = `${bFirst} ${bLast}`.trim();
+      }
+      if (aName < bName) return -1;
+      if (aName > bName) return 1;
+      return 0;
+    });
+  },
+
   /** Dropdown HTML for Excel / PDF export */
   exportButtonsHtml(tableKey) {
     return `
@@ -314,7 +336,10 @@ const Pages = {
   // -------------------- APPLICATIONS --------------------
   async applications() {
     const res = await Admin.get('/students/applications.php?status=pending');
-    const rows = res.data || [];
+    const rows = this._sortByStudentName(res.data || []);
+    if (typeof Admin.refreshApplicationsBadge === 'function') {
+      Admin.refreshApplicationsBadge();
+    }
     this._appRows = rows;
     this._appFiltered = rows;
 
@@ -349,6 +374,9 @@ const Pages = {
         <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
           <span class="fw-semibold">Pending Applications</span>
           <div class="d-flex gap-2 align-items-center flex-wrap">
+            <button class="btn btn-sm btn-primary" onclick="Pages.openApplyPage()" title="Open registration form">
+              <i class="bi bi-plus-circle"></i> Apply
+            </button>
             <div class="search-input-wrap">
               <i class="bi bi-search"></i>
               <input type="search" id="appSearch" class="form-control form-control-sm" placeholder="Filter name, phone, zone...">
@@ -482,6 +510,9 @@ const Pages = {
     try {
       await Admin.post('/students/applications.php', { application_id: id, action });
       Admin.toast(`Application ${action}ted successfully`);
+      if (typeof Admin.refreshApplicationsBadge === 'function') {
+        Admin.refreshApplicationsBadge();
+      }
       this.load('applications');
     } catch (e) {
       Admin.toast(e.message, 'error');
@@ -542,6 +573,9 @@ const Pages = {
       await Admin.put('/students/applications.php', body);
       Admin.toast('Application updated');
       bootstrap.Modal.getInstance(document.getElementById('editAppModal'))?.hide();
+      if (typeof Admin.refreshApplicationsBadge === 'function') {
+        Admin.refreshApplicationsBadge();
+      }
       this.load('applications');
     } catch (e) {
       Admin.toast(e.message, 'error');
@@ -557,10 +591,19 @@ const Pages = {
         delete_student: alsoStudent
       });
       Admin.toast(res.message || 'Application deleted');
+      if (typeof Admin.refreshApplicationsBadge === 'function') {
+        Admin.refreshApplicationsBadge();
+      }
       this.load('applications');
     } catch (e) {
       Admin.toast(e.message, 'error');
     }
+  },
+
+  openApplyPage() {
+    const zoneId = Admin.currentZone?.id ? String(Admin.currentZone.id) : '';
+    const path = zoneId ? `../registration/?zone_id=${encodeURIComponent(zoneId)}` : '../registration/';
+    window.open(path, '_blank', 'noopener');
   },
 
   // -------------------- STUDENTS --------------------
@@ -574,7 +617,7 @@ const Pages = {
     const juniorSet = ov.junior || null;
     const seniorSet = ov.senior || null;
     this._studentSetFilter = this._studentSetFilter || ''; // '' = all, or set_number string
-    this._studentRows = initialRes.data || [];
+    this._studentRows = this._sortByStudentName(initialRes.data || []);
 
     const rowHtml = (r) => `
       <tr>
@@ -693,7 +736,7 @@ const Pages = {
       url += params.join('&');
       try {
         const res2 = await Admin.get(url);
-        this._studentRows = res2.data || [];
+        this._studentRows = this._sortByStudentName(res2.data || []);
         this.renderPagedTable({ ...stuOpts, rows: this._studentRows, page: 1 });
         // Keep export title in sync with active set tab
         if (this._exports?.students) {
@@ -840,6 +883,12 @@ const Pages = {
       </div>`;
   },
 
+  _ensureStudentModal() {
+    if (!document.getElementById('editStudentModal')) {
+      document.body.insertAdjacentHTML('beforeend', this._studentModalHtml());
+    }
+  },
+
   async editStudent(id) {
     try {
       let row = (this._studentRows || []).find(r => r.id == id);
@@ -851,6 +900,7 @@ const Pages = {
         Admin.toast('Student not found', 'error');
         return;
       }
+      this._ensureStudentModal();
       document.getElementById('editStudentId').value = id;
       document.getElementById('editStuFirstName').value = row.first_name || '';
       document.getElementById('editStuLastName').value = row.last_name || '';
@@ -1573,7 +1623,7 @@ const Pages = {
     const url = cid ? `/assessments/results.php?conclave_id=${cid}` : '/assessments/results.php';
     try {
       const res = await Admin.get(url);
-      const rows = res.data || [];
+      const rows = this._sortByStudentName(res.data || []);
       this._resultRows = rows;
 
       const rowHtml = (r) => `
@@ -1625,7 +1675,7 @@ const Pages = {
   async runProbationCheck() {
     try {
       const res = await Admin.get('/students/status.php?action=check_probation');
-      const rows = res.data || [];
+      const rows = this._sortByStudentName(res.data || [], 'full_name');
       document.getElementById('probBody').innerHTML = rows.map(r => `
         <tr>
           <td>${r.full_name}</td>
