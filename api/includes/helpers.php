@@ -103,6 +103,87 @@ function calculateTotalScore(array $scores): float {
 }
 
 /**
+ * Compute or re-compute a student's result for a conclave.
+ * Shared by attendance and assessments endpoints so either action
+ * (marking attendance OR recording scores) keeps conclave_results in sync.
+ */
+function computeResult(PDO $pdo, int $studentId, int $conclaveId, $oversightOverride = null): void {
+    // Attendance score
+    $stmt = $pdo->prepare("
+        SELECT day_number, session, is_present 
+        FROM attendance 
+        WHERE student_id = ? AND conclave_id = ?
+    ");
+    $stmt->execute([$studentId, $conclaveId]);
+    $sessions = $stmt->fetchAll();
+    $attendanceScore = calculateAttendanceScore($sessions);
+    $hasAttendance = count($sessions) > 0 && $attendanceScore > 0;
+
+    // Assessment scores
+    $stmt = $pdo->prepare("
+        SELECT type, score FROM assessments 
+        WHERE student_id = ? AND conclave_id = ?
+    ");
+    $stmt->execute([$studentId, $conclaveId]);
+    $assessments = $stmt->fetchAll(PDO::FETCH_KEY_PAIR);
+
+    $summary     = (float)($assessments['summary'] ?? 0);
+    $short       = (float)($assessments['short_paper'] ?? 0);
+    $long        = (float)($assessments['long_paper'] ?? 0);
+    $term        = (float)($assessments['term_paper'] ?? 0);
+    $hasTerm     = isset($assessments['term_paper']);
+
+    // Oversight – preserve any previously saved value instead of resetting it
+    if ($oversightOverride !== null) {
+        $oversight = (float)$oversightOverride;
+    } else {
+        $existing = $pdo->prepare("SELECT oversight_score FROM conclave_results WHERE student_id = ? AND conclave_id = ?");
+        $existing->execute([$studentId, $conclaveId]);
+        $prevOversight = $existing->fetchColumn();
+        $oversight = $prevOversight !== false ? (float)$prevOversight : (float)WEIGHT_OVERSIGHT;
+    }
+
+    $total = calculateTotalScore([
+        'attendance_score'  => $attendanceScore,
+        'summary_score'     => $summary,
+        'short_paper_score' => $short,
+        'long_paper_score'  => $long,
+        'term_paper_score'  => $term,
+        'oversight_score'   => $oversight
+    ]);
+
+    // Upsert result
+    $stmt = $pdo->prepare("
+        INSERT INTO conclave_results (
+            student_id, conclave_id,
+            attendance_score, summary_score, short_paper_score, long_paper_score,
+            term_paper_score, oversight_score, total_score,
+            has_attendance, has_term_paper, computed_at
+        ) VALUES (
+            ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW()
+        )
+        ON DUPLICATE KEY UPDATE
+            attendance_score = VALUES(attendance_score),
+            summary_score = VALUES(summary_score),
+            short_paper_score = VALUES(short_paper_score),
+            long_paper_score = VALUES(long_paper_score),
+            term_paper_score = VALUES(term_paper_score),
+            oversight_score = VALUES(oversight_score),
+            total_score = VALUES(total_score),
+            has_attendance = VALUES(has_attendance),
+            has_term_paper = VALUES(has_term_paper),
+            computed_at = NOW()
+    ");
+    $stmt->execute([
+        $studentId, $conclaveId,
+        $attendanceScore, $summary, $short, $long,
+        $term, $oversight, $total,
+        $hasAttendance ? 1 : 0,
+        $hasTerm ? 1 : 0
+    ]);
+}
+
+/**
  * Get active sets system-wide (junior + senior).
  * Sets are global - all zones run the same set concurrently.
  * Returns array of set rows ordered by set_number ASC (lower = older = senior).

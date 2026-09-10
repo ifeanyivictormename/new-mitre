@@ -175,81 +175,9 @@ if ($method === 'POST') {
 jsonError('Method not allowed', 405);
 
 /**
- * Compute or re-compute a student's result for a conclave
- */
-function computeResult(PDO $pdo, int $studentId, int $conclaveId, $oversightOverride = null): void {
-    // Attendance score
-    $stmt = $pdo->prepare("
-        SELECT day_number, session, is_present 
-        FROM attendance 
-        WHERE student_id = ? AND conclave_id = ?
-    ");
-    $stmt->execute([$studentId, $conclaveId]);
-    $sessions = $stmt->fetchAll();
-    $attendanceScore = calculateAttendanceScore($sessions);
-    $hasAttendance = count($sessions) > 0 && $attendanceScore > 0;
-
-    // Assessment scores
-    $stmt = $pdo->prepare("
-        SELECT type, score FROM assessments 
-        WHERE student_id = ? AND conclave_id = ?
-    ");
-    $stmt->execute([$studentId, $conclaveId]);
-    $assessments = $stmt->fetchAll(PDO::FETCH_KEY_PAIR);
-
-    $summary     = (float)($assessments['summary'] ?? 0);
-    $short       = (float)($assessments['short_paper'] ?? 0);
-    $long        = (float)($assessments['long_paper'] ?? 0);
-    $term        = (float)($assessments['term_paper'] ?? 0);
-    $hasTerm     = isset($assessments['term_paper']);
-
-    // Oversight
-    $oversight = $oversightOverride !== null 
-        ? (float)$oversightOverride 
-        : WEIGHT_OVERSIGHT; // default full marks if not specified
-
-    $total = calculateTotalScore([
-        'attendance_score'  => $attendanceScore,
-        'summary_score'     => $summary,
-        'short_paper_score' => $short,
-        'long_paper_score'  => $long,
-        'term_paper_score'  => $term,
-        'oversight_score'   => $oversight
-    ]);
-
-    // Upsert result
-    $stmt = $pdo->prepare("
-        INSERT INTO conclave_results (
-            student_id, conclave_id,
-            attendance_score, summary_score, short_paper_score, long_paper_score,
-            term_paper_score, oversight_score, total_score,
-            has_attendance, has_term_paper, computed_at
-        ) VALUES (
-            ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW()
-        )
-        ON DUPLICATE KEY UPDATE
-            attendance_score = VALUES(attendance_score),
-            summary_score = VALUES(summary_score),
-            short_paper_score = VALUES(short_paper_score),
-            long_paper_score = VALUES(long_paper_score),
-            term_paper_score = VALUES(term_paper_score),
-            oversight_score = VALUES(oversight_score),
-            total_score = VALUES(total_score),
-            has_attendance = VALUES(has_attendance),
-            has_term_paper = VALUES(has_term_paper),
-            computed_at = NOW()
-    ");
-    $stmt->execute([
-        $studentId, $conclaveId,
-        $attendanceScore, $summary, $short, $long,
-        $term, $oversight, $total,
-        $hasAttendance ? 1 : 0,
-        $hasTerm ? 1 : 0
-    ]);
-}
-
-/**
  * Batch compute for a whole conclave or single student
+ * (computeResult() itself now lives in includes/helpers.php so attendance
+ * saves can also trigger recomputation)
  */
 function handleCompute(PDO $pdo, array $admin, array $input): void {
     $conclaveId = (int)($input['conclave_id'] ?? 0);

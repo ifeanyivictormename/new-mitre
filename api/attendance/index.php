@@ -17,6 +17,7 @@
 
 require_once __DIR__ . '/../includes/cors.php';
 require_once __DIR__ . '/../includes/auth.php';
+require_once __DIR__ . '/../includes/helpers.php';
 
 $admin  = requireAdmin(['super_admin', 'admin']);
 $pdo    = db();
@@ -103,6 +104,9 @@ if ($method === 'POST') {
         }
 
         $pdo->commit();
+
+        // Keep conclave_results in sync so attendance shows up in Results immediately.
+        computeResult($pdo, $studentId, $conclaveId);
 
         // Return current attendance for this student/conclave
         $stmt = $pdo->prepare("

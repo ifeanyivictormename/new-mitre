@@ -66,7 +66,7 @@ define('APP_VERSION', '1.0.0');
 
 // Session
 define('SESSION_NAME', 'MITRE_SESSION');
-define('SESSION_LIFETIME', 7200);               // 2 hours
+define('SESSION_LIFETIME', 259200);             // 3 days
 
 // SMS Gateway (placeholder – replace with real credentials later)
 define('SMS_ENABLED', false);
