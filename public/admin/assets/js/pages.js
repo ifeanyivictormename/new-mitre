@@ -1687,9 +1687,12 @@ const Pages = {
               <option value="">All conclaves</option>
               ${options}
             </select>
-            <button class="btn btn-sm btn-primary" onclick="Pages.loadResults()">Load</button>
+            <button class="btn btn-primary" id="resLoadBtn" onclick="Pages.loadResults()">Load</button>
             ${this.exportButtonsHtml('results')}
           </div>
+        </div>
+        <div class="card-body pb-0">
+          <div id="resInfoAlert" class="alert alert-info py-2 small mb-3">Only students with total score greater than 0 are shown in this table.</div>
         </div>
         <div class="table-responsive">
           <table class="table table-hover mb-0">
@@ -1745,20 +1748,39 @@ const Pages = {
   },
 
   async loadResults() {
+    const loadBtn = document.getElementById('resLoadBtn');
     const cid = document.getElementById('resConclave').value;
     const zid = document.getElementById('resZone')?.value || '';
     const params = [];
     if (cid) params.push('conclave_id=' + encodeURIComponent(cid));
     if (zid) params.push('zone_id=' + encodeURIComponent(zid));
     const url = '/assessments/results.php' + (params.length ? ('?' + params.join('&')) : '');
+    if (loadBtn) {
+      loadBtn.disabled = true;
+      loadBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status"></span>Loading...';
+    }
     try {
       const res = await Admin.get(url);
-      const rows = this._sortByStudentName(res.data || []);
+      const allRows = this._sortByStudentName(res.data || []);
+      const rows = allRows.filter(r => Number(r.total_score || 0) > 0);
+      this._resultHiddenZeroCount = allRows.length - rows.length;
       this._resultRows = rows;
+      const info = document.getElementById('resInfoAlert');
+      if (info) {
+        const hidden = this._resultHiddenZeroCount || 0;
+        info.textContent = hidden > 0
+          ? `Only students with total score greater than 0 are shown in this table. Hidden zero-score records: ${hidden}.`
+          : 'Only students with total score greater than 0 are shown in this table.';
+      }
       this.applyResultsFilter();
 
     } catch (e) {
       Admin.toast(e.message, 'error');
+    } finally {
+      if (loadBtn) {
+        loadBtn.disabled = false;
+        loadBtn.textContent = 'Load';
+      }
     }
   },
 
