@@ -15,19 +15,53 @@ ini_set('display_errors', 1);
 // Timezone
 date_default_timezone_set('Africa/Lagos');
 
-// Database credentials – change these for your environment
-define('DB_HOST', 'localhost');
-define('DB_NAME', 'leadstar_new-mitre');
-define('DB_USER', 'leadstar_new-mitre');
-define('DB_PASS', 'Avalanche@25');
+// Environment-aware URL detection
+$httpHost = $_SERVER['HTTP_HOST'] ?? 'localhost';
+$forwardedProto = strtolower((string)($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? ''));
+$isHttps = (
+	(!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
+	|| (isset($_SERVER['SERVER_PORT']) && (int)$_SERVER['SERVER_PORT'] === 443)
+	|| $forwardedProto === 'https'
+);
+$scheme = $isHttps ? 'https' : 'http';
+
+$hostOnly = strtolower((string)preg_replace('/:\d+$/', '', $httpHost));
+$isLocalhost = in_array($hostOnly, ['localhost', '127.0.0.1', '::1'], true);
+
+$detectedAppUrl = $isLocalhost
+	? 'http://localhost/mitre2/api'
+	: 'https://api.leadstar.com.ng/mitre';
+
+$detectedFrontendUrl = $isLocalhost
+	? 'http://localhost'
+	: 'https://mitre.com.ng';
+
+// Database credentials – localhost vs live
+if ($isLocalhost) {
+	$dbHost = 'localhost';
+	$dbName = 'training_school';
+	$dbUser = 'root';
+	$dbPass = '';
+} else {
+	// Update these live values for your production host.
+	$dbHost = 'localhost';
+	$dbName = 'leadstar_new-mitre';
+	$dbUser = 'leadstar_new-mitre';
+	$dbPass = 'Avalanche@25';
+}
+
+define('DB_HOST', $dbHost);
+define('DB_NAME', $dbName);
+define('DB_USER', $dbUser);
+define('DB_PASS', $dbPass);
 define('DB_CHARSET', 'utf8mb4');
 
 // Application
-define('APP_NAME', 'Minister Improvement and Training Retreat');
+define('APP_NAME', 'MITRE');
 // Backend / API base URL (no trailing slash). Used for CORS and building absolute upload URLs.
-define('APP_URL', 'https://api.leadstar.com.ng/mitre');    // DEV – change to https://api.yourdomain.com on live
+define('APP_URL', rtrim($detectedAppUrl, '/'));
 // Frontend origin(s) allowed to call this API with credentials (comma-separated if multiple)
-define('FRONTEND_URL', 'https://mitre.com.ng');          // DEV – origin only (no path). Live: https://yourdomain.com
+define('FRONTEND_URL', rtrim($detectedFrontendUrl, '/'));
 define('APP_VERSION', '1.0.0');
 
 // Session

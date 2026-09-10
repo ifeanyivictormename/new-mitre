@@ -6,11 +6,14 @@
  * ---------------------------------------------------------
  */
 
-// DEV (XAMPP / local folder under htdocs)
-//window.API_BASE = 'http://localhost/mitre2/api';
-
-// LIVE – comment the line above and uncomment this when you deploy
- window.API_BASE = 'https://api.leadstar.com.ng/mitre';
+// DEV / LIVE auto-detection
+(function () {
+  const host = (window.location.hostname || '').toLowerCase();
+  const isLocal = host === 'localhost' || host === '127.0.0.1';
+  window.API_BASE = isLocal
+    ? 'http://localhost/mitre2/api'
+    : 'https://api.leadstar.com.ng/mitre';
+})();
 
 // Helper: apiUrl('/students/register.php') → full URL
 window.apiUrl = function (path) {
