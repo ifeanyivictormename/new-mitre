@@ -1669,12 +1669,17 @@ const Pages = {
       })
     ].join('');
     this._resultRows = [];
+    this._resultFiltered = [];
 
     this.content.innerHTML = `
       <div class="card table-card">
         <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
           <span class="fw-semibold">Results</span>
           <div class="d-flex gap-2 align-items-center flex-wrap">
+            <div class="search-input-wrap">
+              <i class="bi bi-search"></i>
+              <input type="search" id="resSearch" class="form-control form-control-sm" placeholder="Search student name or phone...">
+            </div>
             <select class="form-select form-select-sm" id="resZone" style="width:auto">
               ${zoneOptions}
             </select>
@@ -1714,7 +1719,7 @@ const Pages = {
         { key: 'oversight_score', label: 'Oversight (5)' },
         { key: 'total_score', label: 'Total' }
       ],
-      getRows: () => (this._resultRows || []).map(r => ({
+      getRows: () => (this._resultFiltered || this._resultRows || []).map(r => ({
         name: `${r.first_name} ${r.last_name}`,
         conclave: r.conclave_title || ('Seq ' + r.sequence),
         attendance_score: r.attendance_score,
@@ -1726,6 +1731,9 @@ const Pages = {
         total_score: r.total_score
       }))
     });
+
+    const searchEl = document.getElementById('resSearch');
+    searchEl?.addEventListener('input', () => this.applyResultsFilter());
 
     const zoneSelect = document.getElementById('resZone');
     if (zoneSelect) {
@@ -1747,32 +1755,44 @@ const Pages = {
       const res = await Admin.get(url);
       const rows = this._sortByStudentName(res.data || []);
       this._resultRows = rows;
+      this.applyResultsFilter();
 
-      const rowHtml = (r) => `
-        <tr>
-          <td>${r.first_name} ${r.last_name}</td>
-          <td>${r.conclave_title || 'Seq '+r.sequence}</td>
-          <td>${r.attendance_score}</td>
-          <td>${r.summary_score}</td>
-          <td>${r.short_paper_score}</td>
-          <td>${r.long_paper_score}</td>
-          <td>${r.term_paper_score}</td>
-          <td><strong>${r.total_score}</strong></td>
-        </tr>`;
-
-      this.renderPagedTable({
-        key: 'results',
-        rows,
-        rowHtml,
-        tbodyId: 'resultsBody',
-        pagerId: 'resultsPager',
-        colspan: 8,
-        emptyText: 'No results',
-        page: 1
-      });
     } catch (e) {
       Admin.toast(e.message, 'error');
     }
+  },
+
+  applyResultsFilter() {
+    const q = (document.getElementById('resSearch')?.value || '').trim().toLowerCase();
+    const rows = this._resultRows || [];
+    const filtered = !q ? rows : rows.filter(r => {
+      const hay = `${r.first_name || ''} ${r.last_name || ''} ${r.phone || ''}`.toLowerCase();
+      return hay.includes(q);
+    });
+    this._resultFiltered = filtered;
+
+    const rowHtml = (r) => `
+      <tr>
+        <td>${r.first_name} ${r.last_name}</td>
+        <td>${r.conclave_title || 'Seq '+r.sequence}</td>
+        <td>${r.attendance_score}</td>
+        <td>${r.summary_score}</td>
+        <td>${r.short_paper_score}</td>
+        <td>${r.long_paper_score}</td>
+        <td>${r.term_paper_score}</td>
+        <td><strong>${r.total_score}</strong></td>
+      </tr>`;
+
+    this.renderPagedTable({
+      key: 'results',
+      rows: filtered,
+      rowHtml,
+      tbodyId: 'resultsBody',
+      pagerId: 'resultsPager',
+      colspan: 8,
+      emptyText: 'No results',
+      page: 1
+    });
   },
 
   // -------------------- PROBATION --------------------
