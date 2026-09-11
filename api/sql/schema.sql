@@ -435,3 +435,24 @@ INSERT INTO settings (setting_key, setting_value, description) VALUES
 ('sms_enabled', '0', 'Enable/disable SMS sending'),
 ('application_close_days', '30', 'Days before resumption when application closes'),
 ('admission_sms_days', '14', 'Days before resumption to send admission SMS');
+
+-- ------------------------------------------------------------
+-- ADMIN NOTIFICATIONS (admin-to-admin messaging)
+-- Also available as migrations/001_admin_notifications.sql
+-- ------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS admin_notifications (
+    id              INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    sender_id       INT UNSIGNED NOT NULL,
+    recipient_id    INT UNSIGNED NOT NULL,
+    message         TEXT         NOT NULL,
+    is_read         TINYINT(1)   NOT NULL DEFAULT 0,
+    read_at         DATETIME     NULL,
+    created_at      TIMESTAMP    DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT fk_notif_sender    FOREIGN KEY (sender_id)    REFERENCES admins(id) ON DELETE CASCADE,
+    CONSTRAINT fk_notif_recipient FOREIGN KEY (recipient_id) REFERENCES admins(id) ON DELETE CASCADE,
+
+    INDEX idx_recipient_read_created (recipient_id, is_read, created_at DESC),
+    INDEX idx_recipient_id (recipient_id, id),
+    INDEX idx_created_at (created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
