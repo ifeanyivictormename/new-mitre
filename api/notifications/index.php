@@ -24,6 +24,14 @@
  *
  * POST   /api/notifications/index.php?action=mark_all_read
  *        → mark all for current admin as read
+ *
+ * POST   /api/notifications/index.php?action=edit
+ *        Body: { "id": N, "message": "..." }
+ *        → edit one notification (sender only)
+ *
+ * POST   /api/notifications/index.php?action=delete
+ *        Body: { "id": N }
+ *        → delete one notification (sender only)
  */
 
 require_once __DIR__ . '/../includes/cors.php';
@@ -43,6 +51,7 @@ function notifRow(array $row): array {
         'sender_id'     => (int)$row['sender_id'],
         'sender_name'   => $row['sender_name'] ?? null,
         'recipient_id'  => (int)$row['recipient_id'],
+        'recipient_name'=> $row['recipient_name'] ?? null,
         'message'       => $row['message'],
         'is_read'       => (int)$row['is_read'] === 1,
         'read_at'       => $row['read_at'],
@@ -92,19 +101,21 @@ if ($method === 'GET') {
     $unreadOnly = !empty($_GET['unread_only']);
 
     $sql = "
-        SELECT n.*, s.full_name AS sender_name
+        SELECT n.*, s.full_name AS sender_name, r.full_name AS recipient_name
         FROM admin_notifications n
         INNER JOIN admins s ON s.id = n.sender_id
-        WHERE n.recipient_id = ?
+        INNER JOIN admins r ON r.id = n.recipient_id
+        WHERE (n.recipient_id = ? OR n.sender_id = ?)
     ";
-    $params = [$myId];
+    $params = [$myId, $myId];
 
     if ($sinceId > 0) {
         $sql .= " AND n.id > ?";
         $params[] = $sinceId;
     }
     if ($unreadOnly) {
-        $sql .= " AND n.is_read = 0";
+        $sql .= " AND n.recipient_id = ? AND n.is_read = 0";
+        $params[] = $myId;
     }
 
     $sql .= " ORDER BY n.id DESC LIMIT " . (int)$limit;
@@ -164,6 +175,76 @@ if ($method === 'POST') {
         ");
         $stmt->execute([$myId]);
         jsonSuccess(['updated' => $stmt->rowCount()], 'All marked as read');
+    }
+
+    // Edit one notification (sender only)
+    if ($action === 'edit') {
+        $id = (int)($input['id'] ?? 0);
+        $message = trim((string)($input['message'] ?? ''));
+
+        if ($id <= 0) {
+            jsonError('Invalid notification id');
+        }
+        if ($message === '' || mb_strlen($message) > 2000) {
+            jsonError('Message is required and must be 1–2000 characters');
+        }
+
+        $ownerStmt = $pdo->prepare("
+            SELECT sender_id
+            FROM admin_notifications
+            WHERE id = ?
+            LIMIT 1
+        ");
+        $ownerStmt->execute([$id]);
+        $ownerId = $ownerStmt->fetchColumn();
+
+        if ($ownerId === false) {
+            jsonError('Notification not found', 404);
+        }
+        if ((int)$ownerId !== $myId) {
+            jsonError('Only the sender can edit this notification', 403);
+        }
+
+        $stmt = $pdo->prepare("
+            UPDATE admin_notifications
+            SET message = ?
+            WHERE id = ? AND sender_id = ?
+        ");
+        $stmt->execute([$message, $id, $myId]);
+
+        jsonSuccess(['updated' => $stmt->rowCount()], 'Notification updated');
+    }
+
+    // Delete one notification (sender only)
+    if ($action === 'delete') {
+        $id = (int)($input['id'] ?? 0);
+        if ($id <= 0) {
+            jsonError('Invalid notification id');
+        }
+
+        $ownerStmt = $pdo->prepare("
+            SELECT sender_id
+            FROM admin_notifications
+            WHERE id = ?
+            LIMIT 1
+        ");
+        $ownerStmt->execute([$id]);
+        $ownerId = $ownerStmt->fetchColumn();
+
+        if ($ownerId === false) {
+            jsonError('Notification not found', 404);
+        }
+        if ((int)$ownerId !== $myId) {
+            jsonError('Only the sender can delete this notification', 403);
+        }
+
+        $stmt = $pdo->prepare("
+            DELETE FROM admin_notifications
+            WHERE id = ? AND sender_id = ?
+        ");
+        $stmt->execute([$id, $myId]);
+
+        jsonSuccess(['deleted' => $stmt->rowCount()], 'Notification deleted');
     }
 
     // Send notification(s)

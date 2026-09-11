@@ -128,7 +128,7 @@ const Pages = {
   /**
    * Register export dataset for a table key.
    * @param {string} key
-   * @param {{ title: string, columns: string[], rows: Array<Array|object>, getRows?: function }} meta
+  * @param {{ title: string, columns: string[], rows: Array<Array|object>, getRows?: function, excludeKeys?: string[] }} meta
    */
   setExportData(key, meta) {
     if (!this._exports) this._exports = {};
@@ -146,7 +146,11 @@ const Pages = {
       Admin.toast('No rows to export', 'error');
       return;
     }
-    const columns = meta.columns || [];
+    const excluded = new Set((meta.excludeKeys || []).map(k => String(k)));
+    const columns = (meta.columns || []).filter(c => {
+      const k = typeof c === 'object' ? c.key : c;
+      return !excluded.has(String(k));
+    });
     const title = meta.title || key;
     // Normalise to array-of-arrays
     const matrix = rows.map(r => {
@@ -1699,18 +1703,20 @@ const Pages = {
             <thead>
               <tr>
                 <th>Student</th><th>Conclave</th><th>Att (45)</th><th>Sum (5)</th><th>Short (5)</th>
-                <th>Long (10)</th><th>Term (30)</th><th>Total</th>
+                <th>Long (10)</th><th>Term (30)</th><th>Total</th><th>Action</th>
               </tr>
             </thead>
-            <tbody id="resultsBody"><tr><td colspan="8" class="text-center text-muted">Select a conclave and click Load</td></tr></tbody>
+            <tbody id="resultsBody"><tr><td colspan="9" class="text-center text-muted">Select a conclave and click Load</td></tr></tbody>
           </table>
         </div>
         <div id="resultsPager"></div>
       </div>
+      ${this._resultEditModalHtml()}
     `;
 
     this.setExportData('results', {
       title: 'Results',
+      excludeKeys: ['action', 'actions'],
       columns: [
         { key: 'name', label: 'Student' },
         { key: 'conclave', label: 'Conclave' },
@@ -1803,6 +1809,12 @@ const Pages = {
         <td>${r.long_paper_score}</td>
         <td>${r.term_paper_score}</td>
         <td><strong>${r.total_score}</strong></td>
+        <td>
+          <div class="btn-group btn-group-sm" role="group" aria-label="Result actions">
+            <button class="btn btn-outline-primary" onclick="Pages.openResultEditModal(${Number(r.student_id)}, ${Number(r.conclave_id)})">Edit</button>
+            <button class="btn btn-outline-danger" onclick="Pages.deleteResultRecord(${Number(r.student_id)}, ${Number(r.conclave_id)})">Delete</button>
+          </div>
+        </td>
       </tr>`;
 
     this.renderPagedTable({
@@ -1811,10 +1823,151 @@ const Pages = {
       rowHtml,
       tbodyId: 'resultsBody',
       pagerId: 'resultsPager',
-      colspan: 8,
+      colspan: 9,
       emptyText: 'No results',
       page: 1
     });
+  },
+
+  _resultEditModalHtml() {
+    return `
+      <div class="modal fade" id="editResultModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h5 class="modal-title">Edit Result Record</h5>
+              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+              <input type="hidden" id="erStudentId">
+              <input type="hidden" id="erConclaveId">
+
+              <div class="alert alert-info py-2 small">
+                <strong id="erStudentName">Student</strong>
+                <span class="mx-1">|</span>
+                <span id="erConclaveName">Conclave</span>
+              </div>
+
+              <div class="row g-3">
+                <div class="col-md-4">
+                  <label class="form-label">Attendance (0-45)</label>
+                  <input type="number" class="form-control" id="erAttendance" min="0" max="45" step="0.01" required>
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label">Summary (0-5)</label>
+                  <input type="number" class="form-control" id="erSummary" min="0" max="5" step="0.01" required>
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label">Short Paper (0-5)</label>
+                  <input type="number" class="form-control" id="erShort" min="0" max="5" step="0.01" required>
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label">Long Paper (0-10)</label>
+                  <input type="number" class="form-control" id="erLong" min="0" max="10" step="0.01" required>
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label">Term Paper (0-30)</label>
+                  <input type="number" class="form-control" id="erTerm" min="0" max="30" step="0.01" required>
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label">Oversight (0-5)</label>
+                  <input type="number" class="form-control" id="erOversight" min="0" max="5" step="0.01" required>
+                </div>
+              </div>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+              <button type="button" class="btn btn-primary" id="erSaveBtn" onclick="Pages.saveResultEditModal()">Save changes</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  },
+
+  openResultEditModal(studentId, conclaveId) {
+    const sid = Number(studentId);
+    const cid = Number(conclaveId);
+    const rows = this._resultRows || [];
+    const row = rows.find(r => Number(r.student_id) === sid && Number(r.conclave_id) === cid);
+    if (!row) {
+      Admin.toast('Could not load selected result row', 'error');
+      return;
+    }
+
+    document.getElementById('erStudentId').value = String(sid);
+    document.getElementById('erConclaveId').value = String(cid);
+    document.getElementById('erStudentName').textContent = `${row.first_name || ''} ${row.last_name || ''}`.trim() || 'Student';
+    document.getElementById('erConclaveName').textContent = row.conclave_title || ('Seq ' + row.sequence);
+
+    document.getElementById('erAttendance').value = String(Number(row.attendance_score || 0));
+    document.getElementById('erSummary').value = String(Number(row.summary_score || 0));
+    document.getElementById('erShort').value = String(Number(row.short_paper_score || 0));
+    document.getElementById('erLong').value = String(Number(row.long_paper_score || 0));
+    document.getElementById('erTerm').value = String(Number(row.term_paper_score || 0));
+    document.getElementById('erOversight').value = String(Number(row.oversight_score || 0));
+
+    const el = document.getElementById('editResultModal');
+    if (!el || !window.bootstrap || !bootstrap.Modal) return;
+    bootstrap.Modal.getOrCreateInstance(el).show();
+  },
+
+  async saveResultEditModal() {
+    const studentId = Number(document.getElementById('erStudentId')?.value || 0);
+    const conclaveId = Number(document.getElementById('erConclaveId')?.value || 0);
+
+    const payload = {
+      action: 'update',
+      student_id: studentId,
+      conclave_id: conclaveId,
+      attendance_score: document.getElementById('erAttendance')?.value,
+      summary_score: document.getElementById('erSummary')?.value,
+      short_paper_score: document.getElementById('erShort')?.value,
+      long_paper_score: document.getElementById('erLong')?.value,
+      term_paper_score: document.getElementById('erTerm')?.value,
+      oversight_score: document.getElementById('erOversight')?.value
+    };
+
+    if (!payload.student_id || !payload.conclave_id) {
+      Admin.toast('Invalid result record selected', 'error');
+      return;
+    }
+
+    const saveBtn = document.getElementById('erSaveBtn');
+    if (saveBtn) {
+      saveBtn.disabled = true;
+      saveBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status"></span>Saving...';
+    }
+
+    try {
+      await Admin.post('/assessments/results.php', payload);
+      Admin.toast('Result record updated');
+      bootstrap.Modal.getOrCreateInstance(document.getElementById('editResultModal')).hide();
+      await this.loadResults();
+    } catch (e) {
+      Admin.toast(e.message || 'Failed to update result', 'error');
+    } finally {
+      if (saveBtn) {
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'Save changes';
+      }
+    }
+  },
+
+  async deleteResultRecord(studentId, conclaveId) {
+    const ok = window.confirm('Delete this result row and its assessment records for this student/conclave?');
+    if (!ok) return;
+    try {
+      await Admin.post('/assessments/results.php', {
+        action: 'delete',
+        student_id: Number(studentId),
+        conclave_id: Number(conclaveId)
+      });
+      Admin.toast('Result record deleted');
+      await this.loadResults();
+    } catch (e) {
+      Admin.toast(e.message || 'Failed to delete result', 'error');
+    }
   },
 
   // -------------------- PROBATION --------------------

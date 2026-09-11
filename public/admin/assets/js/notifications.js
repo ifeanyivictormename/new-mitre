@@ -153,6 +153,24 @@ const AdminNotifications = {
           if (id) this.markRead(id, btn.closest('.list-group-item'));
         });
       });
+
+      container.querySelectorAll('[data-edit-notif]').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const id = parseInt(btn.dataset.editNotif, 10);
+          if (!id) return;
+          const currentMessage = btn.dataset.message || '';
+          this.editMessage(id, currentMessage);
+        });
+      });
+
+      container.querySelectorAll('[data-delete-notif]').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const id = parseInt(btn.dataset.deleteNotif, 10);
+          if (id) this.deleteMessage(id);
+        });
+      });
     } catch (e) {
       container.innerHTML = `
         <div class="alert alert-danger m-3 mb-0 small">
@@ -163,22 +181,38 @@ const AdminNotifications = {
   },
 
   renderItem(n) {
-    const unread = !n.is_read;
+    const myId = Number(Admin.user?.id || 0);
+    const isSender = Number(n.sender_id) === myId;
+    const isRecipient = Number(n.recipient_id) === myId;
+    const unread = isRecipient && !n.is_read;
     const when = this.formatWhen(n.created_at);
     const sender = n.sender_name || 'Admin';
     const msg = (n.message || '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const safeMessageAttr = (n.message || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;');
+    const senderActions = isSender ? `
+      <button type="button" class="btn btn-sm btn-outline-primary flex-shrink-0" data-edit-notif="${n.id}" data-message="${safeMessageAttr}" title="Edit notification">
+        <i class="bi bi-pencil"></i>
+      </button>
+      <button type="button" class="btn btn-sm btn-outline-danger flex-shrink-0" data-delete-notif="${n.id}" title="Delete notification">
+        <i class="bi bi-trash"></i>
+      </button>` : '';
+    const readAction = unread ? `<button type="button" class="btn btn-sm btn-outline-secondary flex-shrink-0" data-mark-read="${n.id}" title="Mark as read"><i class="bi bi-check2"></i></button>` : '';
     return `
       <div class="list-group-item notif-item ${unread ? 'notif-unread' : ''}" data-id="${n.id}">
         <div class="d-flex justify-content-between align-items-start gap-2">
           <div class="flex-grow-1 min-w-0">
             <div class="d-flex align-items-center gap-2 mb-1">
               <strong class="small text-truncate">${sender}</strong>
+              ${isSender ? '<span class="badge text-bg-light border">Sent by you</span>' : ''}
               ${unread ? '<span class="badge bg-primary rounded-pill" style="font-size:.6rem">New</span>' : ''}
             </div>
             <div class="small text-break">${msg}</div>
             <div class="text-muted mt-1" style="font-size:.7rem">${when}</div>
           </div>
-          ${unread ? `<button type="button" class="btn btn-sm btn-outline-secondary flex-shrink-0" data-mark-read="${n.id}" title="Mark as read"><i class="bi bi-check2"></i></button>` : ''}
+          <div class="d-flex align-items-start gap-1 flex-shrink-0">
+            ${readAction}
+            ${senderActions}
+          </div>
         </div>
       </div>`;
   },
@@ -222,6 +256,38 @@ const AdminNotifications = {
       Admin.toast('All notifications marked as read');
     } catch (e) {
       Admin.toast(e.message || 'Could not mark all as read', 'error');
+    }
+  },
+
+  async editMessage(id, currentMessage) {
+    const updated = window.prompt('Edit notification message:', currentMessage || '');
+    if (updated === null) return;
+
+    const message = updated.trim();
+    if (!message) {
+      Admin.toast('Message cannot be empty', 'error');
+      return;
+    }
+
+    try {
+      await Admin.post('/notifications/index.php?action=edit', { id, message });
+      Admin.toast('Notification updated');
+      await this.loadList();
+    } catch (e) {
+      Admin.toast(e.message || 'Failed to update notification', 'error');
+    }
+  },
+
+  async deleteMessage(id) {
+    const ok = window.confirm('Delete this notification? This cannot be undone.');
+    if (!ok) return;
+
+    try {
+      await Admin.post('/notifications/index.php?action=delete', { id });
+      Admin.toast('Notification deleted');
+      await this.loadList();
+    } catch (e) {
+      Admin.toast(e.message || 'Failed to delete notification', 'error');
     }
   },
 
