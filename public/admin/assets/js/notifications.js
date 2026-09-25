@@ -64,7 +64,7 @@ const AdminNotifications = {
     if (this.inFlight || document.hidden) return;
     this.inFlight = true;
     try {
-      let url = '/notifications/index.php?limit=20';
+      let url = '/notifications/index.php?limit=50';
       if (!forceFull && this.maxId > 0) {
         url += `&since_id=${this.maxId}`;
       }
@@ -128,7 +128,7 @@ const AdminNotifications = {
     container.innerHTML = '<div class="text-center text-muted py-4 small"><span class="spinner-border spinner-border-sm me-2"></span>Loading…</div>';
 
     try {
-      const res = await Admin.get('/notifications/index.php?limit=30');
+      const res = await Admin.get('/notifications/index.php?limit=100');
       const data = res.data || {};
       const list = data.notifications || [];
       this.unreadCount = data.unread_count ?? 0;

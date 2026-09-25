@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+
+  <meta name="keywords" content="Discipleship, discipleship works, discipleship labour, discipleship in kaduna state Nigeria, MITRE">
+  <meta name="description" content="Ministers Improvement And Training Retreat, MITRE, Threshers Team Ministry, Kaduna">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" />
+  <link rel="stylesheet" href="../assets/css/bootstrap.css" />
+  <link rel="stylesheet" href="../assets/css/styles.css" />
+  <link rel="apple-touch-icon" sizes="180x180" href="../assets/img/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="../assets/img/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="../assets/img/favicon-16x16.png">
+  <link rel="manifest" href="../../site.webmanifest">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css">
+
+  <title>MITRE Application Portal</title>
+</head>
+<body class="application-page">
+  <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+    <div class="container">
+      <a class="navbar-brand fw-bold" href="../../index.html">MITRE</a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#applicationNav" aria-controls="applicationNav" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse" id="applicationNav">
+        <ul class="navbar-nav ms-auto">
+          <li class="nav-item"><a class="nav-link" href="../../index.html">Home</a></li>
+          <li class="nav-item"><a class="nav-link active" aria-current="page" href="index.html">Application</a></li>
+          <li class="nav-item"><a class="nav-link" href="../../index.html#criteria">Admission Criteria</a></li>
+          <li class="nav-item"><a class="nav-link" href="../../index.html#contact">Contact</a></li>
+        </ul>
+      </div>
+    </div>
+  </nav>
+
+  <header class="portal-hero text-center">
+    <div class="container">
+      <i class="bi bi-pencil-square fs-1"></i>
+      <h1 class="h2 mt-2 mb-1">Student Application</h1>
+      <p class="mb-0 opacity-75">Apply for Minister Improvement and Training Retreat (3-year programme)</p>
+    </div>
+  </header>
+
+  <main class="container application-content">
+    <div class="card form-card">
+      <div class="card-body p-4 p-md-5">
+        <div id="alert" class="alert d-none" role="alert"></div>
+        <div class="d-flex justify-content-between mb-4" aria-label="Application progress">
+          <span class="fw-semibold" id="stepLabel">Step 1 of 3</span>
+        </div>
+        <ol class="application-stepper" id="stepProgress" aria-label="Application steps">
+          <li class="application-step active" data-progress-step="1" aria-current="step"><span class="step-number">1</span><span class="step-name">Personal</span></li>
+          <li class="application-step" data-progress-step="2"><span class="step-number">2</span><span class="step-name">Spiritual &amp; Education</span></li>
+          <li class="application-step" data-progress-step="3"><span class="step-number">3</span><span class="step-name">Passport &amp; Referee</span></li>
+        </ol>
+        <p class="application-save-hint d-none" id="saveHint" role="status">Your progress is saved automatically.</p>
+
+        <form id="applicationForm" novalidate>
+          <section data-step="1">
+            <h3 class="h5 mb-3">Personal Information</h3>
+            <p class="step-description">Tell us about yourself and how we can contact you.</p>
+            <div class="row g-3">
+              <div class="col-md-6"><label class="form-label" for="first_name">First Name *</label><input type="text" class="form-control" id="first_name" required></div>
+              <div class="col-md-6"><label class="form-label" for="last_name">Last Name *</label><input type="text" class="form-control" id="last_name" required></div>
+              <div class="col-md-6"><label class="form-label" for="other_names">Other Names</label><input type="text" class="form-control" id="other_names"></div>
+              <div class="form-section-heading col-12">Contact Information</div>
+              <div class="col-md-6"><label class="form-label" for="phone">Phone Number *</label><input type="tel" class="form-control" id="phone" required placeholder="08012345678" inputmode="tel" autocomplete="tel" data-help="Use an active Nigerian phone number."></div>
+              <div class="col-md-6"><label class="form-label" for="alt_phone">Alternative Phone</label><input type="tel" class="form-control" id="alt_phone" inputmode="tel" autocomplete="tel-national"></div>
+              <div class="col-md-6"><label class="form-label" for="email">Email</label><input type="email" class="form-control" id="email" autocomplete="email"></div>
+              <div class="col-md-4"><label class="form-label" for="age">Age</label><input type="number" class="form-control" id="age" min="10" max="120"></div>
+              <div class="col-md-4"><label class="form-label" for="gender">Gender *</label><select class="form-select" id="gender" required><option value="">Select</option><option value="male">Male</option><option value="female">Female</option><option value="other">Other</option></select></div>
+              <div class="col-md-4"><label class="form-label" for="marital_status">Marital Status *</label><select class="form-select" id="marital_status" required><option value="">Select</option><option value="single">Single</option><option value="married">Married</option><option value="separated">Separated</option><option value="widowed">Widowed</option><option value="other">Other</option></select></div>
+              <div class="form-section-heading col-12">Location</div>
+              <div class="col-md-6"><label class="form-label" for="zone_id">Zone / Branch *</label><select class="form-select" id="zone_id" required data-help="Choose the MITRE zone or branch you attend."><option value="">Select zone</option></select></div>
+              <div class="col-md-6"><label class="form-label" for="state_of_origin">State of Origin</label><input type="text" class="form-control" id="state_of_origin"></div>
+              <div class="col-md-6"><label class="form-label" for="lga">LGA</label><input type="text" class="form-control" id="lga"></div>
+              <div class="col-12"><label class="form-label" for="address">Contact / Resident Address *</label><textarea class="form-control" id="address" rows="2" required autocomplete="street-address"></textarea></div>
+              <div class="form-section-heading col-12">Work and Communication</div>
+              <div class="col-md-6"><label class="form-label" for="occupation">Occupation *</label><input type="text" class="form-control" id="occupation" required data-help="Tell us your current work or ministry role."></div>
+              <div class="col-md-6"><label class="form-label" for="lang_speak">Languages You Speak *</label><input type="text" class="form-control" id="lang_speak" required placeholder="Example: English, Hausa"></div>
+              <div class="col-md-6"><label class="form-label" for="lang_write">Languages You Write *</label><input type="text" class="form-control" id="lang_write" required placeholder="Example: English, Hausa"></div>
+              <div class="col-md-6"><label class="form-label" for="literacy">Can you read and write English effectively? *</label><select class="form-select" id="literacy" required><option value="">Select</option><option value="yes">Yes</option><option value="no">No</option></select></div>
+            </div>
+          </section>
+
+          <section data-step="2" class="d-none">
+            <h3 class="h5 mb-3">Spiritual, Church and Education Information</h3>
+            <p class="step-description">Share your church background, calling, and educational experience.</p>
+            <div class="row g-3">
+              <div class="col-md-6"><label class="form-label" for="church">Church / Local Assembly *</label><input class="form-control" id="church" required data-help="Enter the church or assembly you currently attend."></div>
+              <div class="col-md-6"><label class="form-label" for="church_post">Function or Post in Church *</label><input class="form-control" id="church_post" required></div>
+              <div class="col-md-6"><label class="form-label" for="born_again">When were you born again? *</label><input class="form-control" id="born_again" required placeholder="Example: 2015" data-help="Enter a year or an approximate date."></div>
+              <div class="col-md-6"><label class="form-label" for="baptism">Baptised into the Holy Ghost? *</label><select class="form-select" id="baptism" required><option value="">Select</option><option value="yes">Yes</option><option value="no">No</option><option value="uncertain">Uncertain</option></select></div>
+              <div class="col-12"><label class="form-label" for="calling">What do you sense is God's call upon your life? *</label><textarea class="form-control" id="calling" rows="3" required placeholder="Briefly describe the calling you sense."></textarea></div>
+              <div class="col-md-6"><label class="form-label" for="in_calling">Are you currently in that calling? *</label><select class="form-select" id="in_calling" required><option value="">Select</option><option value="yes">Yes</option><option value="no">No</option><option value="not_sure">Not sure</option></select></div>
+              <div class="col-md-6"><label class="form-label" for="entered_calling">When did you enter into it?</label><input class="form-control" id="entered_calling"></div>
+              <div class="col-md-6"><label class="form-label" for="attended_mitre">Have you attended MITRE before? *</label><select class="form-select" id="attended_mitre" required><option value="">Select</option><option value="yes">Yes</option><option value="no">No</option></select></div>
+              <div class="col-12"><label class="form-label" for="why_mitre">Why do you want to attend MITRE? *</label><textarea class="form-control" id="why_mitre" rows="3" required placeholder="Tell us what you hope to learn or contribute."></textarea></div>
+              <div class="col-md-6"><label class="form-label" for="oversight">Who has or had spiritual oversight over you?</label><input class="form-control" id="oversight"></div>
+              <div class="col-md-6"><label class="form-label" for="certificate">Highest Certificate Obtained *</label><select class="form-select" id="certificate" required><option value="">Select</option><option>FSLC</option><option>O'level</option><option>NCE</option><option>ND</option><option>HND</option><option>Degree</option><option>Masters</option><option>PhD</option></select></div>
+              <div class="col-md-6"><label class="form-label" for="cert_year">Certificate Year *</label><input type="number" class="form-control" id="cert_year" min="1900" max="2100" required></div>
+              <div class="col-md-6"><label class="form-label" for="institution">School / Institution *</label><input class="form-control" id="institution" required></div>
+            </div>
+          </section>
+
+          <section data-step="3" class="d-none">
+            <h3 class="h5 mb-3">Passport and Referee</h3>
+            <p class="step-description">Upload your passport photograph and invite your referee to complete their section.</p>
+            <div class="alert alert-info">Upload a passport photograph before creating the referee continuation link.</div>
+            <div class="mb-3">
+              <label class="form-label" for="passport">Passport Photograph *</label>
+              <input type="file" class="visually-hidden" id="passport" accept="image/jpeg,image/png" required>
+              <label class="passport-upload-area" for="passport" id="passportUploadArea">
+                <span class="passport-upload-icon" aria-hidden="true"><i class="bi bi-cloud-arrow-up"></i></span>
+                <span class="passport-upload-title">Choose a passport photograph</span>
+                <span class="passport-upload-help">JPG or PNG, maximum 5 MB</span>
+              </label>
+              <div class="passport-preview d-none" id="passportPreview">
+                <img id="passportPreviewImage" class="passport-preview-image" alt="Selected passport preview">
+                <div class="passport-file-details">
+                  <strong id="passportFileName"></strong>
+                  <span id="passportFileSize" class="text-muted"></span>
+                </div>
+                <div class="passport-file-actions">
+                  <button type="button" class="btn btn-sm btn-outline-secondary" id="btnReplacePassport">Replace</button>
+                  <button type="button" class="btn btn-sm btn-outline-danger" id="btnRemovePassport">Remove</button>
+                </div>
+              </div>
+            </div>
+            <button type="button" class="btn btn-outline-primary" id="btnPassport" disabled>Upload Passport</button>
+            <div id="passportStatus" class="small text-muted mt-2"></div>
+            <hr class="my-4">
+            <div id="refereePanel" class="d-none">
+              <p class="mb-2 referee-link-note"><strong>Note!</strong> That link above is unique to your application. You can send it to your referee via WhatsApp, Email, SMS, or any other means. Your registration is incomplete until your referee fills in their details.</p>
+              <div class="input-group">
+                <input type="text" class="form-control referee-link-input" id="refereeLink" readonly title="Click to copy the referee link" aria-label="Private referee continuation link">
+                <button type="button" class="btn btn-outline-secondary" id="btnCopyLink">Copy Link</button>
+              </div>
+              <div id="refereeStatus" class="small text-muted mt-2">Waiting for referee submission.</div>
+              <button type="button" class="btn btn-success d-none mt-3" id="btnSubmitApplication">Submit Completed Application</button>
+            </div>
+            <button type="button" class="btn btn-primary d-none mt-3" id="btnRefereeLink">Create Referee Link</button>
+          </section>
+
+          <div class="d-flex justify-content-between gap-2 mt-4">
+            <button type="button" class="btn btn-outline-secondary d-none" id="btnBack">Back</button>
+            <button type="submit" class="btn btn-primary ms-auto" id="btnNext">Save and Continue</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </main>
+
+  <footer>
+    <div class="container text-center">
+      <p>&copy; 2026 MITRE. All rights reserved.</p>
+      <p id="contact">Need help? <a href="https://api.whatsapp.com/send?phone=2348034530726&text=Hi,%20please%20i%20need%20help%20registering%20for%20MITRE!" target="_blank" rel="noopener">Contact Support</a></p>
+    </div>
+  </footer>
+
+  <div id="toast-container" style="position:fixed;bottom:20px;right:20px;z-index:2000"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="../assets/js/config.js"></script>
+  <script>
+    const API = (window.API_BASE || '').replace(/\/$/, '');
+    const tokenKey = 'mitre_application_token';
+    let token = localStorage.getItem(tokenKey);
+    let currentStep = 1;
+    const form = document.getElementById('applicationForm');
+    const alertBox = document.getElementById('alert');
+    const btnNext = document.getElementById('btnNext');
+    const btnBack = document.getElementById('btnBack');
+    const fields = ids => Object.fromEntries(ids.map(id => [id, document.getElementById(id)?.value.trim() || null]));
+    const step1Ids = ['first_name','last_name','other_names','phone','alt_phone','email','age','gender','marital_status','zone_id','state_of_origin','lga','address','occupation','lang_speak','lang_write','literacy'];
+    const step2Ids = ['church','church_post','born_again','baptism','calling','in_calling','entered_calling','attended_mitre','why_mitre','oversight','certificate','cert_year','institution'];
+
+    function showMessage(message, type = 'success') { alertBox.className = `alert alert-${type}`; alertBox.textContent = message; }
+    function showToast(message, type = 'success') {
+      const toast = document.createElement('div');
+      toast.className = `application-toast application-toast-${type}`;
+      toast.setAttribute('role', 'status');
+      toast.textContent = message;
+      document.getElementById('toast-container').appendChild(toast);
+      requestAnimationFrame(() => toast.classList.add('show'));
+      setTimeout(() => {
+        toast.classList.remove('show');
+        setTimeout(() => toast.remove(), 200);
+      }, 2800);
+    }
+    function fieldMessage(field) {
+      if (field.validity.valueMissing) return 'This field is required.';
+      if (field.validity.typeMismatch) return 'Enter a valid email address.';
+      if (field.validity.rangeUnderflow || field.validity.rangeOverflow) return 'Enter a value within the allowed range.';
+      return field.validationMessage || 'Check this field and try again.';
+    }
+    function setFieldError(field) {
+      const feedback = document.getElementById(`${field.id}-error`);
+      if (!feedback) return;
+      const invalid = !field.checkValidity();
+      field.classList.toggle('is-invalid', invalid);
+      field.classList.toggle('is-valid', !invalid && field.value !== '');
+      field.setAttribute('aria-invalid', invalid ? 'true' : 'false');
+      feedback.textContent = invalid ? fieldMessage(field) : '';
+      feedback.classList.toggle('d-block', invalid);
+    }
+    function enhanceFormFields() {
+      form.querySelectorAll('input, select, textarea').forEach(field => {
+        if (!field.id) return;
+        const label = form.querySelector(`label[for="${field.id}"]`);
+        if (label) {
+          const labelText = label.textContent.replace(/\s*\*\s*$/, '').trim();
+          label.textContent = '';
+          label.append(labelText, ' ');
+          const indicator = document.createElement('span');
+          indicator.className = field.required ? 'field-required' : 'field-optional';
+          indicator.textContent = field.required ? 'Required' : 'Optional';
+          label.append(indicator);
+        }
+        const describedBy = [];
+        if (field.dataset.help) {
+          const help = document.createElement('div');
+          help.className = 'form-text field-help';
+          help.id = `${field.id}-help`;
+          help.textContent = field.dataset.help;
+          field.after(help);
+          describedBy.push(help.id);
+        }
+        const feedback = document.createElement('div');
+        feedback.className = 'invalid-feedback';
+        feedback.id = `${field.id}-error`;
+        field.after(feedback);
+        describedBy.push(feedback.id);
+        field.setAttribute('aria-describedby', describedBy.join(' '));
+        field.addEventListener('blur', () => setFieldError(field));
+        field.addEventListener(field.tagName === 'SELECT' ? 'change' : 'input', () => setFieldError(field));
+      });
+    }
+    function setStep(step) {
+      currentStep = step;
+      document.querySelectorAll('[data-step]').forEach(section => section.classList.toggle('d-none', Number(section.dataset.step) !== step));
+      document.getElementById('stepLabel').textContent = `Step ${Math.min(step, 3)} of 3`;
+      btnBack.classList.toggle('d-none', step <= 1 || step > 2);
+      btnNext.classList.toggle('d-none', step > 2);
+      btnNext.textContent = 'Save and Continue';
+      document.querySelectorAll('[data-progress-step]').forEach(item => {
+        const active = Number(item.dataset.progressStep) === step;
+        item.classList.toggle('active', active);
+        if (active) item.setAttribute('aria-current', 'step');
+        else item.removeAttribute('aria-current');
+      });
+    }
+    const maxPassportSize = 5 * 1024 * 1024;
+    function formatFileSize(bytes) {
+      return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
+    }
+    function clearPassportSelection() {
+      const input = document.getElementById('passport');
+      input.value = '';
+      document.getElementById('passportPreviewImage').removeAttribute('src');
+      document.getElementById('passportPreview').classList.add('d-none');
+      document.getElementById('passportUploadArea').classList.remove('d-none');
+      document.getElementById('btnPassport').disabled = true;
+      document.getElementById('passportFileName').textContent = '';
+      document.getElementById('passportFileSize').textContent = '';
+    }
+    function showPassportPreview(file) {
+      if (!file) return;
+      if (!['image/jpeg', 'image/png'].includes(file.type)) {
+        clearPassportSelection();
+        showMessage('Passport photograph must be a JPG or PNG image.', 'danger');
+        return;
+      }
+      if (file.size > maxPassportSize) {
+        clearPassportSelection();
+        showMessage('Passport photograph must be 5 MB or smaller.', 'danger');
+        return;
+      }
+      const previewImage = document.getElementById('passportPreviewImage');
+      previewImage.src = URL.createObjectURL(file);
+      document.getElementById('passportFileName').textContent = file.name;
+      document.getElementById('passportFileSize').textContent = formatFileSize(file.size);
+      document.getElementById('passportUploadArea').classList.add('d-none');
+      document.getElementById('passportPreview').classList.remove('d-none');
+      document.getElementById('btnPassport').disabled = false;
+    }
+    async function request(path, options = {}) {
+      const response = await fetch(API + path, { ...options, headers: { 'Content-Type': 'application/json', ...(options.headers || {}) } });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok || !data.success) throw new Error(data.message || `Request failed (HTTP ${response.status})`);
+      return data.data;
+    }
+    enhanceFormFields();
+    fetch(API + '/zones/public.php').then(response => response.json()).then(result => {
+      if (!result.success) return;
+      const selected = new URLSearchParams(window.location.search).get('zone_id');
+      result.data.forEach(zone => { const option = new Option(`${zone.name} (${zone.code})`, zone.id); if (selected && String(zone.id) === selected) option.selected = true; document.getElementById('zone_id').appendChild(option); });
+    });
+    if (token) {
+      request(`/students/application.php?token=${encodeURIComponent(token)}`).then(result => {
+        const application = result.application || {};
+        [...step1Ids, ...step2Ids].forEach(id => { if (application[id] !== null && application[id] !== undefined && document.getElementById(id)) document.getElementById(id).value = application[id]; });
+        if (application.passport_photo) {
+          document.getElementById('passportStatus').textContent = 'Passport already uploaded. You can upload a replacement.';
+          document.getElementById('btnRefereeLink').classList.remove('d-none');
+        }
+        if (application.ref_name) {
+          document.getElementById('refereePanel').classList.remove('d-none');
+          document.getElementById('refereeStatus').textContent = 'Referee details received.';
+          document.getElementById('btnSubmitApplication').classList.remove('d-none');
+        }
+        if (result.submitted_at) {
+          document.getElementById('btnSubmitApplication').textContent = 'Application Submitted';
+          document.getElementById('btnSubmitApplication').disabled = true;
+          document.getElementById('refereeStatus').textContent = 'Application submitted and awaiting review.';
+        }
+        setStep(Math.min(Number(result.current_step) || 1, 3));
+      }).catch(() => { localStorage.removeItem(tokenKey); token = null; });
+    }
+    form.addEventListener('submit', async event => {
+      event.preventDefault();
+      const activeSection = document.querySelector(`[data-step="${currentStep}"]`);
+      const invalidField = [...activeSection.querySelectorAll('input, select, textarea')].find(field => !field.checkValidity());
+      if (invalidField) { setFieldError(invalidField); invalidField.focus(); return; }
+      btnNext.disabled = true;
+      try {
+        let result;
+        if (currentStep === 1 && !token) {
+          result = await request('/students/application.php', { method: 'POST', body: JSON.stringify({ action: 'start', ...fields(step1Ids), zone_id: Number(document.getElementById('zone_id').value) }) });
+          token = result.resume_token;
+          localStorage.setItem(tokenKey, token);
+        }
+        result = await request('/students/application.php', { method: 'PATCH', body: JSON.stringify({ token, step: currentStep, data: fields(currentStep === 1 ? step1Ids : step2Ids) }) });
+        const savedStep = currentStep;
+        setStep(Number(result.next_step));
+        document.getElementById('saveHint').classList.remove('d-none');
+        showMessage(savedStep === 2 ? 'Steps 1 and 2 saved successfully.' : `Step ${savedStep} saved successfully.`);
+      } catch (error) { showMessage(error.message, 'danger'); } finally { btnNext.disabled = false; }
+    });
+    btnBack.addEventListener('click', () => setStep(Math.max(1, currentStep - 1)));
+    function resetApplicationFlow() {
+      token = null;
+      localStorage.removeItem(tokenKey);
+      form.reset();
+      form.querySelectorAll('input, select, textarea').forEach(field => {
+        field.classList.remove('is-invalid', 'is-valid');
+        field.setAttribute('aria-invalid', 'false');
+        const feedback = document.getElementById(`${field.id}-error`);
+        if (feedback) {
+          feedback.textContent = '';
+          feedback.classList.remove('d-block');
+        }
+      });
+      document.getElementById('saveHint').classList.add('d-none');
+      clearPassportSelection();
+      document.getElementById('passportStatus').textContent = '';
+      document.getElementById('refereeLink').value = '';
+      document.getElementById('refereeStatus').textContent = 'Waiting for referee submission.';
+      document.getElementById('refereePanel').classList.add('d-none');
+      document.getElementById('btnRefereeLink').classList.add('d-none');
+      document.getElementById('btnRefereeLink').dataset.mode = '';
+      document.getElementById('btnRefereeLink').textContent = 'Create Referee Link';
+      const submitButton = document.getElementById('btnSubmitApplication');
+      submitButton.classList.add('d-none');
+      submitButton.disabled = false;
+      submitButton.textContent = 'Submit Completed Application';
+      setStep(1);
+    }
+    document.getElementById('passport').addEventListener('change', event => showPassportPreview(event.target.files[0]));
+    document.getElementById('btnReplacePassport').addEventListener('click', () => document.getElementById('passport').click());
+    document.getElementById('btnRemovePassport').addEventListener('click', clearPassportSelection);
+    document.getElementById('btnPassport').addEventListener('click', async () => {
+      const file = document.getElementById('passport').files[0];
+      if (!file) { showMessage('Select a passport photograph first.', 'danger'); return; }
+      const body = new FormData();
+      body.append('action', 'upload_passport');
+      body.append('token', token || '');
+      body.append('passport', file);
+      const button = document.getElementById('btnPassport');
+      button.disabled = true;
+      try {
+        await fetch(API + '/students/application.php', { method: 'POST', body }).then(async response => {
+          const result = await response.json().catch(() => ({}));
+          if (!response.ok || !result.success) throw new Error(result.message || 'Passport upload failed');
+          return result;
+        });
+        document.getElementById('passportStatus').textContent = 'Passport uploaded successfully.';
+        document.getElementById('btnRefereeLink').classList.remove('d-none');
+        showMessage('Passport uploaded successfully.');
+      } catch (error) { showMessage(error.message, 'danger'); } finally { button.disabled = false; }
+    });
+    document.getElementById('btnRefereeLink').addEventListener('click', async () => {
+      const button = document.getElementById('btnRefereeLink');
+      if (button.dataset.mode === 'return') {
+        resetApplicationFlow();
+        showMessage('You can start a new application now.');
+        return;
+      }
+      button.disabled = true;
+      try {
+        const result = await request('/students/application.php', { method: 'POST', body: JSON.stringify({ action: 'generate_referee_link', token }) });
+        document.getElementById('refereeLink').value = result.referee_link;
+        document.getElementById('refereePanel').classList.remove('d-none');
+        button.classList.add('d-none');
+      } catch (error) { showMessage(error.message, 'danger'); } finally { button.disabled = false; }
+    });
+    async function copyRefereeLink() {
+      const link = document.getElementById('refereeLink').value;
+      if (!link) return;
+      try {
+        await navigator.clipboard.writeText(link);
+        showToast('Referee link copied.');
+      } catch (error) {
+        showToast('Unable to copy the link. Please select and copy it manually.', 'danger');
+      }
+    }
+    document.getElementById('btnCopyLink').addEventListener('click', copyRefereeLink);
+    document.getElementById('refereeLink').addEventListener('click', copyRefereeLink);
+    document.getElementById('btnSubmitApplication').addEventListener('click', async () => {
+      const button = document.getElementById('btnSubmitApplication');
+      button.disabled = true;
+      try {
+        await request('/students/application.php', { method: 'POST', body: JSON.stringify({ action: 'submit_application', token }) });
+        token = null;
+        localStorage.removeItem(tokenKey);
+        button.textContent = 'Application Submitted';
+        document.getElementById('refereeStatus').textContent = 'Referee details received. Application submitted and awaiting review.';
+        const returnButton = document.getElementById('btnRefereeLink');
+        returnButton.dataset.mode = 'return';
+        returnButton.textContent = 'Return';
+        returnButton.classList.remove('d-none');
+        showMessage('Application submitted successfully.');
+      } catch (error) { showMessage(error.message, 'danger'); button.disabled = false; }
+    });
+    setStep(1);
+  </script>
+</body>
+</html>

@@ -96,7 +96,7 @@ if ($method === 'GET') {
     }
 
     // List notifications (optionally only newer than since_id)
-    $limit = max(1, min(100, (int)($_GET['limit'] ?? 20)));
+    $limit = max(1, min(200, (int)($_GET['limit'] ?? 50)));
     $sinceId = isset($_GET['since_id']) ? (int)$_GET['since_id'] : 0;
     $unreadOnly = !empty($_GET['unread_only']);
 
@@ -118,7 +118,9 @@ if ($method === 'GET') {
         $params[] = $myId;
     }
 
-    $sql .= " ORDER BY n.id DESC LIMIT " . (int)$limit;
+    $fetchLimit = max($limit, min(1000, $limit * 5));
+    $sql .= " ORDER BY (n.recipient_id = ? AND n.is_read = 0) DESC, n.id DESC LIMIT " . (int)$fetchLimit;
+    $params[] = $myId;
 
     $stmt = $pdo->prepare($sql);
     $stmt->execute($params);
@@ -132,7 +134,27 @@ if ($method === 'GET') {
     $cntStmt->execute([$myId]);
     $unreadCount = (int)$cntStmt->fetchColumn();
 
-    $list = array_map('notifRow', $rows);
+    $rawList = array_map('notifRow', $rows);
+
+    // A global send creates one row per recipient. Collapse sender-side duplicates
+    // (same sender/message/timestamp) so the sender sees one logical item.
+    $list = [];
+    $seenSent = [];
+    foreach ($rawList as $item) {
+        $isSentByMe = ((int)$item['sender_id'] === $myId) && ((int)$item['recipient_id'] !== $myId);
+        if ($isSentByMe) {
+            $dedupeKey = $item['sender_id'] . '|' . $item['created_at'] . '|' . $item['message'];
+            if (isset($seenSent[$dedupeKey])) {
+                continue;
+            }
+            $seenSent[$dedupeKey] = true;
+        }
+
+        $list[] = $item;
+        if (count($list) >= $limit) {
+            break;
+        }
+    }
 
     // Highest id in this result set (useful for next poll)
     $maxId = 0;
@@ -190,18 +212,18 @@ if ($method === 'POST') {
         }
 
         $ownerStmt = $pdo->prepare("
-            SELECT sender_id
+            SELECT sender_id, message, created_at
             FROM admin_notifications
             WHERE id = ?
             LIMIT 1
         ");
         $ownerStmt->execute([$id]);
-        $ownerId = $ownerStmt->fetchColumn();
+        $target = $ownerStmt->fetch(PDO::FETCH_ASSOC);
 
-        if ($ownerId === false) {
+        if (!$target) {
             jsonError('Notification not found', 404);
         }
-        if ((int)$ownerId !== $myId) {
+        if ((int)$target['sender_id'] !== $myId) {
             jsonError('Only the sender can edit this notification', 403);
         }
 
@@ -211,6 +233,14 @@ if ($method === 'POST') {
             WHERE id = ? AND sender_id = ?
         ");
         $stmt->execute([$message, $id, $myId]);
+
+        // Keep broadcast copies in sync: update all rows from the same send signature.
+        $syncStmt = $pdo->prepare("
+            UPDATE admin_notifications
+            SET message = ?
+            WHERE sender_id = ? AND created_at = ? AND message = ?
+        ");
+        $syncStmt->execute([$message, $myId, $target['created_at'], $target['message']]);
 
         jsonSuccess(['updated' => $stmt->rowCount()], 'Notification updated');
     }
@@ -223,26 +253,27 @@ if ($method === 'POST') {
         }
 
         $ownerStmt = $pdo->prepare("
-            SELECT sender_id
+            SELECT sender_id, message, created_at
             FROM admin_notifications
             WHERE id = ?
             LIMIT 1
         ");
         $ownerStmt->execute([$id]);
-        $ownerId = $ownerStmt->fetchColumn();
+        $target = $ownerStmt->fetch(PDO::FETCH_ASSOC);
 
-        if ($ownerId === false) {
+        if (!$target) {
             jsonError('Notification not found', 404);
         }
-        if ((int)$ownerId !== $myId) {
+        if ((int)$target['sender_id'] !== $myId) {
             jsonError('Only the sender can delete this notification', 403);
         }
 
+        // Delete all copies from the same send signature.
         $stmt = $pdo->prepare("
             DELETE FROM admin_notifications
-            WHERE id = ? AND sender_id = ?
+            WHERE sender_id = ? AND created_at = ? AND message = ?
         ");
-        $stmt->execute([$id, $myId]);
+        $stmt->execute([$myId, $target['created_at'], $target['message']]);
 
         jsonSuccess(['deleted' => $stmt->rowCount()], 'Notification deleted');
     }

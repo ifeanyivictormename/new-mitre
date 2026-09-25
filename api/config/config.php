@@ -33,7 +33,7 @@ $detectedAppUrl = $isLocalhost
 	: 'https://api.leadstar.com.ng/mitre';
 
 $detectedFrontendUrl = $isLocalhost
-	? 'http://localhost'
+	? 'http://localhost/mitre2/public'
 	: 'https://mitre.com.ng';
 
 // Database credentials – localhost vs live
