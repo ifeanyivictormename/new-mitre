@@ -40,14 +40,13 @@
     <div class="container">
       <i class="bi bi-pencil-square fs-1"></i>
       <h1 class="h2 mt-2 mb-1">Student Application</h1>
-      <p class="mb-0 opacity-75">Apply for Minister Improvement and Training Retreat (3-year programme)</p>
+      <p class="mb-0 opacity-75">Apply for Minister Improvement and Training Retreat<br>(3-year programme)</p>
     </div>
   </header>
 
   <main class="container application-content">
     <div class="card form-card">
       <div class="card-body p-4 p-md-5">
-        <div id="alert" class="alert d-none" role="alert"></div>
         <div class="d-flex justify-content-between mb-4" aria-label="Application progress">
           <span class="fw-semibold" id="stepLabel">Step 1 of 3</span>
         </div>
@@ -56,7 +55,6 @@
           <li class="application-step" data-progress-step="2"><span class="step-number">2</span><span class="step-name">Spiritual &amp; Education</span></li>
           <li class="application-step" data-progress-step="3"><span class="step-number">3</span><span class="step-name">Passport &amp; Referee</span></li>
         </ol>
-        <p class="application-save-hint d-none" id="saveHint" role="status">Your progress is saved automatically.</p>
 
         <form id="applicationForm" novalidate>
           <section data-step="1">
@@ -74,9 +72,9 @@
               <div class="col-md-4"><label class="form-label" for="gender">Gender *</label><select class="form-select" id="gender" required><option value="">Select</option><option value="male">Male</option><option value="female">Female</option><option value="other">Other</option></select></div>
               <div class="col-md-4"><label class="form-label" for="marital_status">Marital Status *</label><select class="form-select" id="marital_status" required><option value="">Select</option><option value="single">Single</option><option value="married">Married</option><option value="separated">Separated</option><option value="widowed">Widowed</option><option value="other">Other</option></select></div>
               <div class="form-section-heading col-12">Location</div>
-              <div class="col-md-6"><label class="form-label" for="zone_id">Zone / Branch *</label><select class="form-select" id="zone_id" required data-help="Choose the MITRE zone or branch you attend."><option value="">Select zone</option></select></div>
+              <div class="col-md-6"><label class="form-label" for="zone_id">Zone *</label><select class="form-select" id="zone_id" required data-help="Choose the MITRE zone or branch you attend."><option value="">Select zone</option></select></div>
               <div class="col-md-6"><label class="form-label" for="state_of_origin">State of Origin</label><input type="text" class="form-control" id="state_of_origin"></div>
-              <div class="col-md-6"><label class="form-label" for="lga">LGA</label><input type="text" class="form-control" id="lga"></div>
+              <div class="col-md-6"><label class="form-label" for="lga">LGA (of Origin)</label><input type="text" class="form-control" id="lga"></div>
               <div class="col-12"><label class="form-label" for="address">Contact / Resident Address *</label><textarea class="form-control" id="address" rows="2" required autocomplete="street-address"></textarea></div>
               <div class="form-section-heading col-12">Work and Communication</div>
               <div class="col-md-6"><label class="form-label" for="occupation">Occupation *</label><input type="text" class="form-control" id="occupation" required data-help="Tell us your current work or ministry role."></div>
@@ -171,14 +169,12 @@
     let token = localStorage.getItem(tokenKey);
     let currentStep = 1;
     const form = document.getElementById('applicationForm');
-    const alertBox = document.getElementById('alert');
     const btnNext = document.getElementById('btnNext');
     const btnBack = document.getElementById('btnBack');
     const fields = ids => Object.fromEntries(ids.map(id => [id, document.getElementById(id)?.value.trim() || null]));
     const step1Ids = ['first_name','last_name','other_names','phone','alt_phone','email','age','gender','marital_status','zone_id','state_of_origin','lga','address','occupation','lang_speak','lang_write','literacy'];
     const step2Ids = ['church','church_post','born_again','baptism','calling','in_calling','entered_calling','attended_mitre','why_mitre','oversight','certificate','cert_year','institution'];
 
-    function showMessage(message, type = 'success') { alertBox.className = `alert alert-${type}`; alertBox.textContent = message; }
     function showToast(message, type = 'success') {
       const toast = document.createElement('div');
       toast.className = `application-toast application-toast-${type}`;
@@ -190,6 +186,19 @@
         toast.classList.remove('show');
         setTimeout(() => toast.remove(), 200);
       }, 2800);
+    }
+    function showMessage(message, type = 'success') { showToast(message, type); }
+    function setButtonLoading(button, loading, loadingText = 'Please wait...') {
+      if (loading) {
+        button.dataset.defaultLabel = button.textContent.trim();
+        button.disabled = true;
+        button.setAttribute('aria-busy', 'true');
+        button.innerHTML = `<span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>${loadingText}`;
+      } else {
+        button.disabled = false;
+        button.removeAttribute('aria-busy');
+        button.textContent = button.dataset.defaultLabel || button.textContent;
+      }
     }
     function fieldMessage(field) {
       if (field.validity.valueMissing) return 'This field is required.';
@@ -243,7 +252,7 @@
       currentStep = step;
       document.querySelectorAll('[data-step]').forEach(section => section.classList.toggle('d-none', Number(section.dataset.step) !== step));
       document.getElementById('stepLabel').textContent = `Step ${Math.min(step, 3)} of 3`;
-      btnBack.classList.toggle('d-none', step <= 1 || step > 2);
+      btnBack.classList.toggle('d-none', step <= 1);
       btnNext.classList.toggle('d-none', step > 2);
       btnNext.textContent = 'Save and Continue';
       document.querySelectorAll('[data-progress-step]').forEach(item => {
@@ -293,6 +302,24 @@
       if (!response.ok || !data.success) throw new Error(data.message || `Request failed (HTTP ${response.status})`);
       return data.data;
     }
+    function getInvalidField(section) {
+      return [...section.querySelectorAll('input, select, textarea')].find(field => !field.checkValidity());
+    }
+    async function saveCurrentStep(step) {
+      const section = document.querySelector(`[data-step="${step}"]`);
+      const invalidField = getInvalidField(section);
+      if (invalidField) {
+        setFieldError(invalidField);
+        invalidField.focus();
+        showMessage(fieldMessage(invalidField), 'danger');
+        return false;
+      }
+      await request('/students/application.php', {
+        method: 'PATCH',
+        body: JSON.stringify({ token, step, data: fields(step === 1 ? step1Ids : step2Ids) })
+      });
+      return true;
+    }
     enhanceFormFields();
     fetch(API + '/zones/public.php').then(response => response.json()).then(result => {
       if (!result.success) return;
@@ -314,6 +341,7 @@
         }
         if (result.submitted_at) {
           document.getElementById('btnSubmitApplication').textContent = 'Application Submitted';
+          document.getElementById('btnSubmitApplication').dataset.defaultLabel = 'Application Submitted';
           document.getElementById('btnSubmitApplication').disabled = true;
           document.getElementById('refereeStatus').textContent = 'Application submitted and awaiting review.';
         }
@@ -323,9 +351,14 @@
     form.addEventListener('submit', async event => {
       event.preventDefault();
       const activeSection = document.querySelector(`[data-step="${currentStep}"]`);
-      const invalidField = [...activeSection.querySelectorAll('input, select, textarea')].find(field => !field.checkValidity());
-      if (invalidField) { setFieldError(invalidField); invalidField.focus(); return; }
-      btnNext.disabled = true;
+      const invalidField = getInvalidField(activeSection);
+      if (invalidField) {
+        setFieldError(invalidField);
+        invalidField.focus();
+        showMessage(fieldMessage(invalidField), 'danger');
+        return;
+      }
+      setButtonLoading(btnNext, true, 'Saving...');
       try {
         let result;
         if (currentStep === 1 && !token) {
@@ -336,11 +369,28 @@
         result = await request('/students/application.php', { method: 'PATCH', body: JSON.stringify({ token, step: currentStep, data: fields(currentStep === 1 ? step1Ids : step2Ids) }) });
         const savedStep = currentStep;
         setStep(Number(result.next_step));
-        document.getElementById('saveHint').classList.remove('d-none');
         showMessage(savedStep === 2 ? 'Steps 1 and 2 saved successfully.' : `Step ${savedStep} saved successfully.`);
-      } catch (error) { showMessage(error.message, 'danger'); } finally { btnNext.disabled = false; }
+      } catch (error) { showMessage(error.message, 'danger'); } finally { setButtonLoading(btnNext, false); }
     });
-    btnBack.addEventListener('click', () => setStep(Math.max(1, currentStep - 1)));
+    btnBack.addEventListener('click', async () => {
+      if (currentStep === 3) {
+        setStep(2);
+        return;
+      }
+      const savedStep = currentStep;
+      const previousStep = savedStep - 1;
+      setButtonLoading(btnBack, true, 'Saving...');
+      try {
+        if (await saveCurrentStep(savedStep)) {
+          setStep(previousStep);
+          showMessage(`Step ${savedStep} changes saved.`);
+        }
+      } catch (error) {
+        showMessage(error.message, 'danger');
+      } finally {
+        setButtonLoading(btnBack, false);
+      }
+    });
     function resetApplicationFlow() {
       token = null;
       localStorage.removeItem(tokenKey);
@@ -354,7 +404,6 @@
           feedback.classList.remove('d-block');
         }
       });
-      document.getElementById('saveHint').classList.add('d-none');
       clearPassportSelection();
       document.getElementById('passportStatus').textContent = '';
       document.getElementById('refereeLink').value = '';
@@ -365,8 +414,9 @@
       document.getElementById('btnRefereeLink').textContent = 'Create Referee Link';
       const submitButton = document.getElementById('btnSubmitApplication');
       submitButton.classList.add('d-none');
-      submitButton.disabled = false;
       submitButton.textContent = 'Submit Completed Application';
+      submitButton.dataset.defaultLabel = 'Submit Completed Application';
+      setButtonLoading(submitButton, false);
       setStep(1);
     }
     document.getElementById('passport').addEventListener('change', event => showPassportPreview(event.target.files[0]));
@@ -380,7 +430,7 @@
       body.append('token', token || '');
       body.append('passport', file);
       const button = document.getElementById('btnPassport');
-      button.disabled = true;
+      setButtonLoading(button, true, 'Uploading...');
       try {
         await fetch(API + '/students/application.php', { method: 'POST', body }).then(async response => {
           const result = await response.json().catch(() => ({}));
@@ -390,7 +440,7 @@
         document.getElementById('passportStatus').textContent = 'Passport uploaded successfully.';
         document.getElementById('btnRefereeLink').classList.remove('d-none');
         showMessage('Passport uploaded successfully.');
-      } catch (error) { showMessage(error.message, 'danger'); } finally { button.disabled = false; }
+      } catch (error) { showMessage(error.message, 'danger'); } finally { setButtonLoading(button, false); }
     });
     document.getElementById('btnRefereeLink').addEventListener('click', async () => {
       const button = document.getElementById('btnRefereeLink');
@@ -399,13 +449,13 @@
         showMessage('You can start a new application now.');
         return;
       }
-      button.disabled = true;
+      setButtonLoading(button, true, 'Creating link...');
       try {
         const result = await request('/students/application.php', { method: 'POST', body: JSON.stringify({ action: 'generate_referee_link', token }) });
         document.getElementById('refereeLink').value = result.referee_link;
         document.getElementById('refereePanel').classList.remove('d-none');
         button.classList.add('d-none');
-      } catch (error) { showMessage(error.message, 'danger'); } finally { button.disabled = false; }
+      } catch (error) { showMessage(error.message, 'danger'); } finally { setButtonLoading(button, false); }
     });
     async function copyRefereeLink() {
       const link = document.getElementById('refereeLink').value;
@@ -421,19 +471,20 @@
     document.getElementById('refereeLink').addEventListener('click', copyRefereeLink);
     document.getElementById('btnSubmitApplication').addEventListener('click', async () => {
       const button = document.getElementById('btnSubmitApplication');
-      button.disabled = true;
+      setButtonLoading(button, true, 'Submitting...');
       try {
         await request('/students/application.php', { method: 'POST', body: JSON.stringify({ action: 'submit_application', token }) });
         token = null;
         localStorage.removeItem(tokenKey);
         button.textContent = 'Application Submitted';
+        button.dataset.defaultLabel = 'Application Submitted';
         document.getElementById('refereeStatus').textContent = 'Referee details received. Application submitted and awaiting review.';
         const returnButton = document.getElementById('btnRefereeLink');
         returnButton.dataset.mode = 'return';
         returnButton.textContent = 'Return';
         returnButton.classList.remove('d-none');
         showMessage('Application submitted successfully.');
-      } catch (error) { showMessage(error.message, 'danger'); button.disabled = false; }
+      } catch (error) { showMessage(error.message, 'danger'); setButtonLoading(button, false); }
     });
     setStep(1);
   </script>

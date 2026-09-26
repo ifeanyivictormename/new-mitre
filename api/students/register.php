@@ -118,21 +118,13 @@ try {
 
     $pdo->commit();
 
-    // --- Acknowledgment SMS (stub) ---
-    $smsMessage = "Dear {$firstName}, your application to " . APP_NAME . " ({$zone['name']}) has been received. You will be notified of your admission status. Thank you.";
-    logSms($phone, $smsMessage, 'acknowledgment', $studentId);
-
-    // Mark SMS as sent (even if stub)
-    $pdo->prepare("UPDATE applications SET acknowledgment_sms_sent = 1 WHERE id = ?")
-        ->execute([$applicationId]);
-
     jsonSuccess([
         'student_id'     => $studentId,
         'application_id' => $applicationId,
         'zone'           => $zone['name'],
         'phone'          => $phone,
         'status'         => 'applicant'
-    ], 'Application submitted successfully. An acknowledgment message has been sent.');
+    ], 'Application submitted successfully.');
 
 } catch (Exception $e) {
     if ($pdo->inTransaction()) {
@@ -142,18 +134,3 @@ try {
     jsonError('Registration failed. Please try again later.', 500);
 }
 
-/**
- * Simple SMS logger (real sending will be implemented in Phase 5)
- */
-function logSms(string $phone, string $message, string $purpose, ?int $studentId = null): void {
-    try {
-        $pdo = db();
-        $stmt = $pdo->prepare("
-            INSERT INTO sms_logs (recipient_phone, message, purpose, related_student_id, status, sent_at)
-            VALUES (?, ?, ?, ?, 'sent', NOW())
-        ");
-        $stmt->execute([$phone, $message, $purpose, $studentId]);
-    } catch (Exception $e) {
-        error_log('SMS log failed: ' . $e->getMessage());
-    }
-}

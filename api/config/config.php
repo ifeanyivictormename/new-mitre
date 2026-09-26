@@ -68,10 +68,12 @@ define('APP_VERSION', '1.0.0');
 define('SESSION_NAME', 'MITRE_SESSION');
 define('SESSION_LIFETIME', 259200);             // 3 days
 
-// SMS Gateway (placeholder – replace with real credentials later)
-define('SMS_ENABLED', false);
-define('SMS_API_KEY', '');
+// eBulkSMS gateway. Keep the username and API key server-side; never put them in public/.
+define('SMS_ENABLED', true);
+define('SMS_USERNAME', 'nnelivictor1@gmail.com');
+define('SMS_API_KEY', '922d4ee15b99cda96103999868babcb2389563420294634f1db9c9c1adcb7644');
 define('SMS_SENDER_ID', 'MITRE');
+define('SMS_API_URL', 'https://api.ebulksms.com/sendsms.json');
 
 // File uploads – live under the API host
 define('UPLOAD_PATH', __DIR__ . '/../uploads/');

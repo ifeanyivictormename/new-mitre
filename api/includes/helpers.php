@@ -64,6 +64,106 @@ function normalizePhone(string $phone): ?string {
 }
 
 /**
+ * Send one SMS through eBulkSMS and write the result to the existing SMS log.
+ * Returns true only when eBulkSMS responds with SUCCESS.
+ */
+function sendEbulkSms(string $phone, string $message, string $purpose, ?int $studentId = null): bool {
+    $normalizedPhone = normalizePhone($phone);
+    $settingsEnabled = true;
+    try {
+        $settingsEnabled = getGlobalSetting(db(), 'sms_enabled', '1') === '1';
+    } catch (Throwable $error) {
+        error_log('SMS setting lookup failed: ' . $error->getMessage());
+    }
+    if (!$normalizedPhone || !SMS_ENABLED || !$settingsEnabled || SMS_USERNAME === '' || SMS_API_KEY === '') {
+        return false;
+    }
+
+    $recipient = '234' . substr($normalizedPhone, 1);
+    $payload = [
+        'SMS' => [
+            'auth' => [
+                'username' => SMS_USERNAME,
+                'apikey' => SMS_API_KEY
+            ],
+            'message' => [
+                'sender' => substr(SMS_SENDER_ID, 0, 11),
+                'messagetext' => substr($message, 0, 160),
+                'flash' => '0'
+            ],
+            'recipients' => [
+                'gsm' => [[
+                    'msidn' => $recipient,
+                    'msgid' => substr(uniqid('mitre_', true), 0, 30)
+                ]]
+            ],
+            'dndsender' => '0'
+        ]
+    ];
+
+    $providerResponse = '';
+    $status = 'failed';
+    try {
+        $curl = curl_init(SMS_API_URL);
+        curl_setopt_array($curl, [
+            CURLOPT_POST => true,
+            CURLOPT_POSTFIELDS => json_encode($payload, JSON_UNESCAPED_UNICODE),
+            CURLOPT_HTTPHEADER => ['Content-Type: application/json'],
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_CONNECTTIMEOUT => 10,
+            CURLOPT_TIMEOUT => 30
+        ]);
+        $providerResponse = (string)curl_exec($curl);
+        $httpCode = (int)curl_getinfo($curl, CURLINFO_HTTP_CODE);
+        $curlError = curl_error($curl);
+        curl_close($curl);
+
+        $response = json_decode($providerResponse, true);
+        $providerStatus = strtoupper((string)($response['response']['status'] ?? ''));
+        if ($httpCode >= 200 && $httpCode < 300 && $providerStatus === 'SUCCESS') {
+            $status = 'sent';
+        } elseif ($curlError !== '') {
+            $providerResponse = 'cURL error: ' . $curlError;
+        }
+    } catch (Throwable $error) {
+        $providerResponse = $error->getMessage();
+    }
+
+    try {
+        $stmt = db()->prepare('INSERT INTO sms_logs (recipient_phone, message, purpose, related_student_id, status, provider_response, sent_at) VALUES (?, ?, ?, ?, ?, ?, ?)');
+        $stmt->execute([$normalizedPhone, $message, $purpose, $studentId, $status, $providerResponse, $status === 'sent' ? date('Y-m-d H:i:s') : null]);
+    } catch (Throwable $error) {
+        error_log('SMS log failed: ' . $error->getMessage());
+    }
+
+    if ($status === 'failed') {
+        error_log('eBulkSMS send failed: ' . $providerResponse);
+    }
+    return $status === 'sent';
+}
+
+/**
+ * Read a global setting, returning the supplied fallback when it is absent.
+ */
+function getGlobalSetting(PDO $pdo, string $key, string $fallback = ''): string {
+    $stmt = $pdo->prepare('SELECT setting_value FROM settings WHERE setting_key = ? LIMIT 1');
+    $stmt->execute([$key]);
+    $value = $stmt->fetchColumn();
+    return $value === false || $value === null || $value === '' ? $fallback : (string)$value;
+}
+
+/**
+ * Render an SMS template using {{placeholder}} tokens.
+ */
+function renderSmsTemplate(PDO $pdo, string $key, string $fallback, array $values): string {
+    $template = getGlobalSetting($pdo, $key, $fallback);
+    foreach ($values as $name => $value) {
+        $template = str_replace('{{' . $name . '}}', (string)$value, $template);
+    }
+    return $template;
+}
+
+/**
  * Generate a simple random token
  */
 function generateToken(int $length = 32): string {

@@ -209,13 +209,19 @@ function detectProbationCandidates(PDO $pdo, ?int $zoneId = null): array {
  */
 function buildStatusSms(string $name, string $status, string $zoneName): string {
     $app = APP_NAME;
+    $pdo = db();
     switch ($status) {
         case 'probation':
             return "Dear {$name}, you have been placed on PROBATION at {$app} ({$zoneName}) due to consecutive missed assessments/attendance. Please contact the administration.";
         case 'inactive':
             return "Dear {$name}, your student status at {$app} ({$zoneName}) has been set to INACTIVE. Contact admin for clarification.";
         case 'withdrawn':
-            return "Dear {$name}, you have been marked as WITHDRAWN from {$app} ({$zoneName}). We wish you the best.";
+            return renderSmsTemplate(
+                $pdo,
+                'sms_withdrawal_template',
+                'Dear {{full_name}}, you have been marked as WITHDRAWN from {{app_name}} ({{zone_name}}). We wish you the best.',
+                ['full_name' => $name, 'app_name' => $app, 'zone_name' => $zoneName]
+            );
         case 'active':
             return "Dear {$name}, your status at {$app} ({$zoneName}) has been restored to ACTIVE. Welcome back.";
         case 'graduated':
@@ -225,23 +231,6 @@ function buildStatusSms(string $name, string $status, string $zoneName): string 
     }
 }
 
-/**
- * Log SMS (real gateway can be plugged in later)
- */
 function logAndSendSms(string $phone, string $message, string $purpose, ?int $studentId = null): void {
-    try {
-        $pdo = db();
-        $status = SMS_ENABLED ? 'pending' : 'sent'; // when real SMS is enabled, set pending then update after send
-
-        $stmt = $pdo->prepare("
-            INSERT INTO sms_logs (recipient_phone, message, purpose, related_student_id, status, sent_at)
-            VALUES (?, ?, ?, ?, ?, NOW())
-        ");
-        $stmt->execute([$phone, $message, $purpose, $studentId, $status]);
-
-        // Placeholder for real SMS gateway call
-        // if (SMS_ENABLED) { sendViaGateway($phone, $message); }
-    } catch (Exception $e) {
-        error_log('SMS log failed: ' . $e->getMessage());
-    }
+    sendEbulkSms($phone, $message, $purpose, $studentId);
 }

@@ -2201,18 +2201,30 @@ const Pages = {
       app_name: 'Application Name',
       sms_enabled: 'SMS Enabled (0 = off, 1 = on)',
       application_close_days: 'Application closes (days before resumption)',
-      admission_sms_days: 'Admission SMS (days before resumption)'
+      admission_sms_days: 'Admission SMS (days before resumption)',
+      sms_application_completion_template: 'Application Completion SMS',
+      sms_admission_template: 'Admission SMS',
+      sms_withdrawal_template: 'Withdrawal Status SMS'
     };
+    const smsTemplateKeys = ['sms_application_completion_template', 'sms_admission_template', 'sms_withdrawal_template'];
+    const escapeHtml = value => String(value || '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
     const map = {};
     rows.forEach(r => { map[r.setting_key] = r; });
-    const coreKeys = ['app_name', 'sms_enabled', 'application_close_days', 'admission_sms_days'];
+    const coreKeys = ['app_name', 'sms_enabled', 'application_close_days', 'admission_sms_days', ...smsTemplateKeys];
     coreKeys.forEach(k => {
       if (!map[k]) map[k] = { setting_key: k, setting_value: '', description: labels[k] || '' };
     });
 
-    let fields = Object.values(map).map(r => {
+    const displayKeys = [...coreKeys, ...Object.keys(map).filter(key => !coreKeys.includes(key))];
+    let fields = displayKeys.map(key => {
+      const r = map[key];
       const label = labels[r.setting_key] || r.setting_key;
       const isBool = r.setting_key === 'sms_enabled';
+      const isTemplate = smsTemplateKeys.includes(r.setting_key);
       return `
         <div class="mb-3">
           <label class="form-label fw-semibold">${label}</label>
@@ -2221,8 +2233,10 @@ const Pages = {
               <option value="0" ${r.setting_value == '0' ? 'selected' : ''}>Disabled (0)</option>
               <option value="1" ${r.setting_value == '1' ? 'selected' : ''}>Enabled (1)</option>
             </select>
+          ` : isTemplate ? `
+            <textarea class="form-control setting-input" data-key="${r.setting_key}" rows="3">${escapeHtml(r.setting_value)}</textarea>
           ` : `
-            <input type="text" class="form-control setting-input" data-key="${r.setting_key}" value="${(r.setting_value || '').replace(/"/g, '&quot;')}">
+            <input type="text" class="form-control setting-input" data-key="${r.setting_key}" value="${escapeHtml(r.setting_value)}">
           `}
           <div class="form-text">${r.description || ''}</div>
         </div>

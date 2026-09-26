@@ -156,6 +156,13 @@ function saveStep(array $input): void {
         jsonError('Application draft not found', 404);
     }
 
+    $stmt = $pdo->prepare("SELECT submitted_at FROM applications WHERE student_id = ? AND status = 'pending' ORDER BY id DESC LIMIT 1");
+    $stmt->execute([(int)$student['id']]);
+    $application = $stmt->fetch();
+    if (!$application || !empty($application['submitted_at'])) {
+        jsonError('This application can no longer be edited', 409);
+    }
+
     $currentStep = (int)$student['application_step'];
     if ($step > $currentStep) {
         jsonError('Complete the previous step before continuing', 409);
@@ -167,10 +174,11 @@ function saveStep(array $input): void {
     $assignments = implode(', ', array_map(static fn($column) => "{$column} = ?", $columns));
     $values = array_values($normalized);
     $nextStep = $step === 1 ? 2 : 3;
+    $storedStep = max($currentStep, $nextStep);
 
     try {
         $pdo->beginTransaction();
-        $values[] = $nextStep;
+        $values[] = $storedStep;
         $values[] = (int)$student['id'];
         $stmt = $pdo->prepare("UPDATE students SET {$assignments}, application_step = ? WHERE id = ? AND application_token = ?");
         $values[] = $token;
@@ -187,7 +195,7 @@ function saveStep(array $input): void {
     jsonSuccess([
         'application_id' => getApplicationId($pdo, (int)$student['id']),
         'student_id' => (int)$student['id'],
-        'current_step' => $nextStep,
+        'current_step' => $storedStep,
         'next_step' => $nextStep
     ], "Step {$step} saved successfully.");
 }
@@ -381,6 +389,17 @@ function submitApplication(array $input): void {
     $stmt->execute([(int)$application['id']]);
     if ($stmt->rowCount() !== 1) {
         jsonError('This application has already been submitted', 409);
+    }
+
+    $smsMessage = renderSmsTemplate(
+        $pdo,
+        'sms_application_completion_template',
+        'Your MITRE application was received successfully. You will be contacted for further information. More of God\'s blessings.',
+        []
+    );
+    if (sendEbulkSms((string)$student['phone'], $smsMessage, 'application_completion', (int)$student['id'])) {
+        $pdo->prepare('UPDATE applications SET acknowledgment_sms_sent = 1 WHERE id = ?')
+            ->execute([(int)$application['id']]);
     }
 
     jsonSuccess([

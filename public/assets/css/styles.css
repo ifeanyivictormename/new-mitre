@@ -205,24 +205,19 @@
 	height: 1.55rem;
 	border-radius: 50%;
 	background: #e9ecef;
-	font-size: 0.75rem;
+	font-size: 0.78rem;
+	padding: 0.34rem;
 }
 
 .application-page .application-step.active .step-number {
 	background: #164a8a;
 	color: #fff;
+	padding: 0.4rem;
 }
 
 .application-page .step-name {
 	min-width: 0;
 	overflow-wrap: anywhere;
-}
-
-.application-page .application-save-hint {
-	margin: 0 0 1.25rem;
-	color: #39704c;
-	font-size: 0.82rem;
-	font-weight: 600;
 }
 
 .application-page .referee-link-note {

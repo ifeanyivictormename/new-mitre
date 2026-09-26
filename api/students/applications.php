@@ -204,15 +204,24 @@ if ($method === 'POST') {
             $stmt->execute([$app['student_id']]);
             $regNo = (string)($stmt->fetchColumn() ?: '');
 
-            // Admission SMS (stub)
-            $msg = "Dear {$app['first_name']}, congratulations! You have been admitted to " . APP_NAME .
-                   " (Set {$setNumber}, Reg. No. {$regNo}). Further details will follow. Welcome!";
-            logSms($app['phone'], $msg, 'admission', (int)$app['student_id']);
-
-            $pdo->prepare("UPDATE applications SET admission_sms_sent = 1 WHERE id = ?")
-                ->execute([$appId]);
-
             $pdo->commit();
+
+            $msg = renderSmsTemplate(
+                $pdo,
+                'sms_admission_template',
+                'Dear {{first_name}}, congratulations! You have been admitted to {{app_name}} (Set {{set_number}}, Reg. No. {{reg_no}}). Further details will follow. Welcome!',
+                [
+                    'first_name' => $app['first_name'],
+                    'app_name' => APP_NAME,
+                    'set_number' => $setNumber,
+                    'reg_no' => $regNo
+                ]
+            );
+            if (sendEbulkSms($app['phone'], $msg, 'admission', (int)$app['student_id'])) {
+                $pdo->prepare("UPDATE applications SET admission_sms_sent = 1 WHERE id = ?")
+                    ->execute([$appId]);
+            }
+
             jsonSuccess([
                 'set_number' => $setNumber,
                 'reg_no'     => $regNo
@@ -446,18 +455,3 @@ if ($method === 'DELETE') {
 
 jsonError('Method not allowed', 405);
 
-/**
- * SMS logger (shared with register)
- */
-function logSms(string $phone, string $message, string $purpose, ?int $studentId = null): void {
-    try {
-        $pdo = db();
-        $stmt = $pdo->prepare("
-            INSERT INTO sms_logs (recipient_phone, message, purpose, related_student_id, status, sent_at)
-            VALUES (?, ?, ?, ?, 'sent', NOW())
-        ");
-        $stmt->execute([$phone, $message, $purpose, $studentId]);
-    } catch (Exception $e) {
-        error_log('SMS log failed: ' . $e->getMessage());
-    }
-}
