@@ -1,2 +1,3 @@
 /admin  /public/admin   301
 /application    /public/application    301
+/application/*  /public/application/:splat  301
